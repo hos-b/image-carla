@@ -25,23 +25,20 @@ if __name__ == "__main__":
     # set up the environment
     env = gym.make('Madras-v0', throttle=True, vision=True, visualise=True, port=3001, pid_assist=False)
     print ("env port : {}".format(env.port))
-    #env.viewer.window.on_key_press = key_press
-    #env.viewer.window.on_key_release = key_release
-    action = np.array([0.0, 0.0, 0.0]).astype('float32')
+    action = np.array([0.0, 1.0, 0.0]).astype('float32')
     episode = 0
     
     while True:
         obs = env.reset()
+        
         step = 0
         episode_reward = 0
         while True:
             # u[0] = steer, u[1] = accel, u[2] = brake
             obs, rew, done, info = env.step(action)
-            
+            print (obs.shape)
             episode_reward += rew
             step +=1
-
-            env.render()
 
             if done :
                 break
