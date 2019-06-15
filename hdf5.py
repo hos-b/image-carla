@@ -1,7 +1,6 @@
 import numpy as np
 import h5py
 
-'''
 imitation_type = np.dtype([('image', float, (20, 30)), ('label', float, 5)])
 print("datatype :\n{}".format(imitation_type))
 
@@ -24,9 +23,8 @@ print("image\n", dataset[0, "image"])
 dataset.resize(2, axis=0 )
 data = np.array([(image, label2)], dtype=imitation_type)
 dataset[1] = data
-
 hdf5_file.close()
-'''
+
 hdf5_file = h5py.File("carla_dataset_1.hdf5", "r")
 print(list(hdf5_file.keys()))
 dataset = hdf5_file['carla_set2']
