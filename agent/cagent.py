@@ -10,11 +10,8 @@ class CBCAgent:
         self.net.to(device)
 
     @torch.no_grad()
-    def predict(self, *input, **kwargs):
-        return self.net(input, kwargs)
-
-    def act(self, frames):
-        pass
+    def predict(self, frames):
+        return self.net(frames, '')
 
     def save(self, file_name):
         torch.save(self.net.state_dict(), file_name+"_model")

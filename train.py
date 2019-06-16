@@ -20,7 +20,7 @@ parser.add_argument('-name', type=str, dest="name", default="debug", help='name 
 parser.add_argument('-lr', type=float, dest="learning_rate", default=5e-4, help='learning rate')
 parser.add_argument('-bsize', type=int, dest="batch_size", default=16, help='batch size')
 parser.add_argument('-epochs', type=int, dest="num_epochs", default=2000, help='number of epochs')
-parser.add_argument('-val', type=int, dest="val_epoch", default=5, help='run an episode every x epochs')
+parser.add_argument('-val', type=int, dest="val_epoch", default=10, help='run an episode every x epochs')
 # specific args for this training
 # parser.add_argument("--weighted", action = "store_true", dest="weighted", default = False, help ='apply weights to loss function')
 parser.add_argument('-history', type=int, dest="history", default=1, help='number of previous frames to stack')
@@ -76,7 +76,7 @@ for epoch in range(1,args.num_epochs+1):
         labels.to(device)
         frames.to(device)
         agent.net.eval()
-        pred = agent.predict(frames,'')
+        pred = agent.predict(frames)
         loss = loss_fn(pred, labels.squeeze())
         loss_v += loss.item()
 
