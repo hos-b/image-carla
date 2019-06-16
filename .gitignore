@@ -14,5 +14,6 @@ manual_control.py
 requirements.txt
 setup.py
 view_start_positions.py
-.vscode/settings.json
+.vscode/
 MANIFEST.in
+tensorboard/
