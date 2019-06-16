@@ -38,7 +38,7 @@ def run_carla_client(args, number_of_episodes=10, frames_per_episode=500, starti
     with make_carla_client("localhost", 2000) as client:
         print('carla client connected')
         # setting up data type
-        imitation_type = np.dtype([('image', float, (640, 480, 3)), ('label', float, 5)])
+        imitation_type = np.dtype([('image', np.uint8, (640, 480, 3)), ('label', np.float32, 5)])
         print("datatype :\n{}".format(imitation_type))
         # total frames collected this run
         total_frames = 0
@@ -175,7 +175,7 @@ def main():
 
     while True:
         try:
-            run_carla_client(args, number_of_episodes=100, frames_per_episode=600, starting_episode=start)
+            run_carla_client(args, number_of_episodes=210, frames_per_episode=700, starting_episode=start)
             print('Done.')
             return
         except TCPConnectionError as error:
