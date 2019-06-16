@@ -31,8 +31,8 @@ print("name : {}\t\t learning rate {}".format(args.name,args.learning_rate))
 print("batch size: {}\t\t epochs :{}".format(args.batch_size,args.num_epochs))
 print("validate every : {}\t history :{}".format(args.val_epoch,args.history))
 # loaders
-train_loader = get_data_loader(batch_size=args.batch_size, train=True, history=args.history)
-val_loader   = get_data_loader(batch_size=args.batch_size, train=False, history=args.history)
+train_loader = get_data_loader(batch_size=args.batch_size, train=True, history=args.history, validation_episodes=10)
+val_loader   = get_data_loader(batch_size=args.batch_size, train=False, history=args.history, validation_episodes=10)
 
 # setting up training device, agent, optimizer
 print("initializing agent, cuda, loss, optim")
