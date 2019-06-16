@@ -7,7 +7,14 @@ from torchvision.models.resnet import ResNet, BasicBlock, model_urls
 Imitation learning network
 """
 
-class ResNetConv(ResNet):    
+class ResNetConv(ResNet):
+    def __init__(self, block, layers, history):
+        super(ResNetConv, self).__init__(block, layers)
+        self.conv1 = nn.Conv2d(3*history, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.relu = nn.ReLU(inplace=True)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+
     def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
@@ -22,16 +29,16 @@ class ResNetConv(ResNet):
         return x
 
 class ResNetAgent(nn.Module):
-    def __init__(self, classes):
+    def __init__(self, classes, history):
         super().__init__()
 
-        # base network
-        self.resnet = ResNetConv(BasicBlock, [2, 2, 2, 2])
+        # resnet
+        self.resnet = ResNetConv(BasicBlock, [2, 2, 2, 2], history=history)
         
-        # other network modules
+        # linear layers
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc1 = nn.Linear(256, 512)
-        self.fc2 = nn.Linear(512, classes)
+        self.fc1 = nn.Linear(512, 640)
+        self.fc2 = nn.Linear(640, classes)
         self.relu = nn.ReLU()
 
         for m in self.modules():

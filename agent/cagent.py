@@ -1,20 +1,17 @@
 import sys
 
 import torch
-from networks import CNN
+from agent.networks import ResNetAgent
 
 class CBCAgent:
     
-    def __init__(self, device = None, weighted=False, history=1):
-        self.net = CNN(channels=3, history_length=history,n_classes=9)
-        self.class_weights = torch.Tensor([1, 1, 1, 1, 1]).to(cuda)
-        if weighted:
-            self.class_weights = torch.Tensor([0.39177557, 1., 2.17533432, 0.64403549, 7.8568873]).to(cuda)
+    def __init__(self, device = None, history=1):
+        self.net = ResNetAgent(classes=9, history=history)
         self.net.to(device)
 
     @torch.no_grad()
-    def predict(self, X):
-        return self.net(X)
+    def predict(self, *input, **kwargs):
+        return self.net(input, kwargs)
 
     def act(self, frames):
         pass
