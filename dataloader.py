@@ -5,7 +5,7 @@ import os
 
 import torch
 import torch.utils.data
-import torchvision.transforms
+import torchvision.transforms as transforms
 
 
 DATASET_DIR = "/home/hosein/part"
@@ -59,35 +59,37 @@ class CarlaHDF5(torch.utils.data.Dataset):
         self.history = kwargs.get("history", 1)
         self.validation_episodes = kwargs.get("validation_episodes", 5)
         self.transform  = kwargs.get("transform")
-        
+
         print("opening {}".format(PKG_NAME))
-        
-        self.keys = list(hdf5_file.keys())
+        self.data = h5py.File(os.path.join(DATASET_DIR, PKG_NAME), "r")        
+        self.keys = list(self.data.keys())
         self.ds_count = len(self.keys)
         
-        if self.is_train :
-            self.start = 0
-            self.end = self.ds_count-self.validation_episodes
+        if self.train :
+            start = 0
+            end = self.ds_count-self.validation_episodes
         else :
-            self.start = self.ds_count-self.validation_episodes
-            self.end = self.ds_count
+            start = self.ds_count-self.validation_episodes
+            end = self.ds_count
 
         self.keys = self.keys[start:end]
         self.ds_count = len(self.keys)
 
-        print("found {} episodes".format(self.ds_count))
-        self.sizes = np.ndarray(shape=(self.ds_count), type=int)
-
-        for hdf5_index, dataset_index in zip(range(self.start, self.end), range(self.ds_count)):
-            self.sizes[dataset_index] = self.hdf5_file[self.keys[hdf5_index]].shape
+        print("found {} episodes ({}-{})".format(self.ds_count, start, end))
+        self.sizes = np.ndarray(shape=(self.ds_count), dtype=np.uint16)
+        for index in range(self.ds_count):
+            self.sizes[index] = self.data[self.keys[index]].shape[0]
 
         self.cummulative_sizes = np.cumsum(self.sizes)
         self.n_samples = self.cummulative_sizes[-1]
-        print("total frame count {}".format(running_sum))
+        print("total frame count {}".format(self.n_samples))
+
+        self.data.close()
+        self.data=None
 
     def __getitem__(self, idx):
         if self.data is None :
-            self.hdf5_file = h5py.File(os.path.join(DATASET_DIR, PKG_NAME), "r")
+            self.data = h5py.File(os.path.join(DATASET_DIR, PKG_NAME), "r")
         
         episode_key = ''
         frame_index = 0
@@ -98,15 +100,16 @@ class CarlaHDF5(torch.utils.data.Dataset):
                 frame_index = idx-last_cs
                 break
             last_cs = self.cummulative_sizes[i]
-        episode = self.hdf5_file[episode_key]
+        episode = self.data[episode_key]
         
         label = action_to_label(episode[frame_index, "label"])
         label = torch.LongTensor([label])
-        samples = torch.zeros(self.history, 3, 640, 480)
+        samples = torch.zeros(3*self.history, 640, 480).float()
 
         for i in range(self.history):
             history_index = max(0, frame_index-i)
-            samples[i] = self.transform(episode[history_index, "image"])
+            np_frame = episode[history_index, "image"]
+            samples[i*3:(i+1)*3] = self.transform(np_frame)
 
         return label, samples
         
@@ -120,6 +123,7 @@ def get_data_loader(batch_size=1, train=False, history=1, validation_episodes=5)
     
     #if train:
     #    transform_list.append(transforms.ColorJitter(hue=.05, saturation=.05))
+    transform_list.append(transforms.ToPILImage())
     transform_list.append(transforms.ToTensor())
     transform_list.append(transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
     transform = transforms.Compose(transform_list)
