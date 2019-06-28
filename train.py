@@ -8,6 +8,7 @@ import torch.optim as optim
 from dataloader import get_data_loader
 from tensorboardX import SummaryWriter
 from agent.cagent import CBCAgent
+from utils import print_over_same_line
 
 snapshot_dir = "./snaps"
 tensorboard_dir="./tensorboard"
@@ -62,6 +63,7 @@ for epoch in range(1,args.num_epochs+1):
     loss_t = loss_v = 0
     
     for idx, (labels, frames) in enumerate(train_loader) :
+        print_over_same_line("training batch {}/{}".format(idx, len(train_loader)))
         labels = labels.to(device)
         frames = frames.to(device)
         agent.net.train()
@@ -74,6 +76,7 @@ for epoch in range(1,args.num_epochs+1):
         writer.add_scalar("iteration_training_loss", loss.item(), (epoch-1)*len(train_loader)+idx)
 
     for idx, (labels, frames) in enumerate(val_loader) :
+        print_over_same_line("validation batch {}/{}".format(idx, len(val_loader)))
         labels = labels.to(device)
         frames = frames.to(device)
         agent.net.eval()
