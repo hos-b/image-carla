@@ -71,6 +71,7 @@ for epoch in range(1,args.num_epochs+1):
         loss.backward()
         loss_t += loss.item()
         optimizer.step()
+        writer.add_scalar("iteration_training_loss", loss.item(), (epoch-1)*len(train_loader)+idx)
 
     for idx, (labels, frames) in enumerate(val_loader) :
         labels = labels.to(device)
