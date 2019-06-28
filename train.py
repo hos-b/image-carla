@@ -62,8 +62,8 @@ for epoch in range(1,args.num_epochs+1):
     loss_t = loss_v = 0
     
     for idx, (labels, frames) in enumerate(train_loader) :
-        labels.to(device)
-        frames.to(device)
+        labels = labels.to(device)
+        frames = frames.to(device)
         agent.net.train()
         optimizer.zero_grad()
         pred  = agent.net(frames,'')
@@ -73,8 +73,8 @@ for epoch in range(1,args.num_epochs+1):
         optimizer.step()
 
     for idx, (labels, frames) in enumerate(val_loader) :
-        labels.to(device)
-        frames.to(device)
+        labels = labels.to(device)
+        frames = frames.to(device)
         agent.net.eval()
         pred = agent.predict(frames)
         loss = loss_fn(pred, labels.squeeze())
