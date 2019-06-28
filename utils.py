@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 
 def action_to_label(action) :
     # bizarre cases
@@ -64,3 +65,9 @@ def label_to_action(label):
         action = [-1.0, 0.0, 0.0]
     elif label == 8:
         action = [1.0, 0.0, 0.0]
+
+def print_over_same_line(text):
+    terminal_width = shutil.get_terminal_size((80, 20)).columns
+    empty_space = max(0, terminal_width - len(text))
+    sys.stdout.write('\r' + text + empty_space * ' ')
+    sys.stdout.flush()
