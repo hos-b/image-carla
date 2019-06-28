@@ -15,7 +15,7 @@ tensorboard_dir="./tensorboard"
 # arg parse
 parser = argparse.ArgumentParser()
 parser.add_argument('--cont', '-c', action = "store_true", dest="continute_training", default = False, help ='continue training')
-parser.add_argument('--snap', '-s', action = "store_true", dest="save_snaps", default = False, help='save snapshots every 5 epochs')
+parser.add_argument('--snap', '-s', action = "store_true", dest="save_snaps", default = True, help='save snapshots every 5 epochs')
 parser.add_argument('-name', type=str, dest="name", default="debug", help='name of the run')
 parser.add_argument('-lr', type=float, dest="learning_rate", default=5e-4, help='learning rate')
 parser.add_argument('-bsize', type=int, dest="batch_size", default=16, help='batch size')
