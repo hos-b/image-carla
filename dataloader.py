@@ -8,7 +8,7 @@ import torch.utils.data
 import torchvision.transforms as transforms
 from utils import action_to_label
 
-DATASET_DIR = "/home/hosein/part"
+DATASET_DIR = "/home/bahadorm"
 PKG_NAME = "carla_dataset.hdf5"
 
 class CarlaHDF5(torch.utils.data.Dataset):

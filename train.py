@@ -36,7 +36,7 @@ val_loader   = get_data_loader(batch_size=args.batch_size, train=False, history=
 
 # setting up training device, agent, optimizer
 print("initializing agent, cuda, loss, optim")
-device = torch.device('cpu')
+device = torch.device('cuda')
 agent = CBCAgent(device=device, history=args.history)
 loss_fn = torch.nn.CrossEntropyLoss().to(device)
 optimizer = optim.Adam(agent.net.parameters(), lr=args.learning_rate)
