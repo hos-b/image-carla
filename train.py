@@ -92,4 +92,5 @@ for epoch in range(1,args.num_epochs+1):
         save_path = os.path.join(snapshot_dir,args.name)
         torch.save(agent.net.state_dict(), save_path+"_model")
         torch.save(optimizer.state_dict(), save_path+"_optimizer")
-    writer.close()
+            
+writer.close()
