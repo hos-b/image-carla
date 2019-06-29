@@ -58,6 +58,8 @@ print("starting tensorboard")
 writer = SummaryWriter(os.path.join(tensorboard_dir,args.name))
 
 print("training ...")
+# lowest loss : save  best snapshots of the network
+lowest_loss = 20
 for epoch in range(1,args.num_epochs+1):    
     print("epoch {}/{}".format(epoch,args.num_epochs))
     loss_t = loss_v = 0
@@ -87,10 +89,13 @@ for epoch in range(1,args.num_epochs+1):
     writer.add_scalar("epoch_training_loss", loss_t/len(train_loader), epoch)
     writer.add_scalar("epoch_validation_loss", loss_v/len(val_loader), epoch)
     loss_e_t = loss_e_v = 0
+    
+    if loss_v/len(val_loader) < lowest_loss :
+        lowest_loss = loss_v/len(val_loader)
 
-    if args.save_snaps :
-        save_path = os.path.join(snapshot_dir,args.name)
-        torch.save(agent.net.state_dict(), save_path+"_model")
-        torch.save(optimizer.state_dict(), save_path+"_optimizer")
+        if args.save_snaps :
+            save_path = os.path.join(snapshot_dir,args.name)
+            torch.save(agent.net.state_dict(), save_path+"_model_{}".format(epoch))
+            torch.save(optimizer.state_dict(), save_path+"_optimizer_{}".format(epoch))
             
 writer.close()
