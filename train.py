@@ -86,16 +86,18 @@ for epoch in range(1,args.num_epochs+1):
         loss = loss_fn(pred, labels.squeeze())
         loss_v += loss.item()
 
+    current_val_loss = loss_v/len(val_loader)
     writer.add_scalar("epoch_training_loss", loss_t/len(train_loader), epoch)
-    writer.add_scalar("epoch_validation_loss", loss_v/len(val_loader), epoch)
+    writer.add_scalar("epoch_validation_loss", current_val_loss, epoch)
     loss_e_t = loss_e_v = 0
     
-    if loss_v/len(val_loader) < lowest_loss :
-        lowest_loss = loss_v/len(val_loader)
-
-        if args.save_snaps :
+    if args.save_snaps :
+        
+        if  current_val_loss < lowest_loss or epoch%5==0 or current_val_loss <1:
+            lowest_loss = current_val_loss if current_val_loss < lowest_loss
             save_path = os.path.join(snapshot_dir,args.name)
             torch.save(agent.net.state_dict(), save_path+"_model_{}".format(epoch))
             torch.save(optimizer.state_dict(), save_path+"_optimizer_{}".format(epoch))
+            print("saving snapshot at epoch {}".format(epoch))
             
 writer.close()
