@@ -35,7 +35,7 @@ print("continute flag: {}\t save snaps :{}".format(args.continute_training,args.
 print("name :{}\t\t learning rate :{}".format(args.name,args.learning_rate))
 print("batch size :{}\t\t epochs :{}".format(args.batch_size,args.num_epochs))
 print("val eps :{}\t val frame :{}".format(args.val_episodes,args.val_frames))
-print("weighted :{}\t history :{}".format(args.weighted,args.history))
+print("weighted :{}\t\t history :{}".format(args.weighted,args.history))
 # loaders ------------------------------------------------------------------------------------------------------------------------------------------
 train_loader = get_data_loader(batch_size=args.batch_size, train=True, history=args.history, validation_episodes=10)
 val_loader   = get_data_loader(batch_size=args.batch_size, train=False, history=args.history, validation_episodes=10)
