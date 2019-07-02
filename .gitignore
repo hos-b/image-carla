@@ -18,3 +18,5 @@ view_start_positions.py
 MANIFEST.in
 tensorboard/
 bornaaa.py
+snaps/
+data/
