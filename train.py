@@ -106,7 +106,7 @@ for epoch in range(1,args.num_epochs+1):
     
     # running 10 validation episodes with the current model
     acv, acp, aco, aiol, aior = evaluate_model(episodes=args.val_episode, frames=args.val_frame, model=agent, device=device, 
-                                               history=args.history, save_images=False, weather=1, vehicles=20, pedestians=40))
+                                               history=args.history, save_images=False, weather=1, vehicles=20, pedestians=40)
     writer.add_scalar("avg collision vehicle", sum(acv)/len(acv), epoch)
     writer.add_scalar("avg collision pedestrian", sum(acp)/len(acp), epoch)
     writer.add_scalar("avg collision other", sum(aco)/len(aco), epoch)
