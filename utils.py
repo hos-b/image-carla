@@ -67,6 +67,7 @@ def label_to_action(label):
         action = [-1.0, 0.0, 0.0]
     elif label == 8:
         action = [1.0, 0.0, 0.0]
+    return action
 
 def print_over_same_line(text):
     terminal_width = shutil.get_terminal_size((80, 20)).columns

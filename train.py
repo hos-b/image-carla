@@ -23,7 +23,7 @@ parser.add_argument('-bsize', type=int, dest="batch_size", default=16, help='bat
 parser.add_argument('-epochs', type=int, dest="num_epochs", default=2000, help='number of epochs')
 parser.add_argument('-val', type=int, dest="val_epoch", default=10, help='run an episode every x epochs')
 # specific args for this training
-# parser.add_argument("--weighted", action = "store_true", dest="weighted", default = False, help ='apply weights to loss function')
+parser.add_argument("--weighted", action = "store_true", dest="weighted", default = False, help ='apply weights to loss function')
 parser.add_argument('-history', type=int, dest="history", default=1, help='number of previous frames to stack')
 args = parser.parse_args()
 
@@ -39,7 +39,10 @@ val_loader   = get_data_loader(batch_size=args.batch_size, train=False, history=
 print("initializing agent, cuda, loss, optim")
 device = torch.device('cuda')
 agent = CBCAgent(device=device, history=args.history)
-loss_fn = torch.nn.CrossEntropyLoss().to(device)
+class_weights = torch.Tensor([1, 1, 1, 1, 1, 1, 1, 1, 1])
+if args.weighted:
+    class_weights = torch.Tensor([ 0.16960808,  1.01462402,  1.        ,  0.336441  ,  1.85798203, 0.8735987 , 51.20952381, 0.01, 0.01]).to(device)
+loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights).to(device)
 optimizer = optim.Adam(agent.net.parameters(), lr=args.learning_rate)
 
 # if flag --c is set, continute training from a previous snapshot
@@ -91,14 +94,14 @@ for epoch in range(1,args.num_epochs+1):
     writer.add_scalar("epoch_validation_loss", current_val_loss, epoch)
     loss_e_t = loss_e_v = 0
     
+    save_path = os.path.join(snapshot_dir,args.name)
+    torch.save(optimizer.state_dict(), save_path+"_optimizer")
+
     if args.save_snaps :
-        
         if  current_val_loss < lowest_loss or epoch%5==0 or current_val_loss <1:
             if current_val_loss < lowest_loss:
                 lowest_loss = current_val_loss
-            save_path = os.path.join(snapshot_dir,args.name)
             torch.save(agent.net.state_dict(), save_path+"_model_{}".format(epoch))
-            torch.save(optimizer.state_dict(), save_path+"_optimizer_{}".format(epoch))
             print("saving snapshot at epoch {}".format(epoch))
             
 writer.close()
