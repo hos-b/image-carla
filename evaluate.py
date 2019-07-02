@@ -8,6 +8,7 @@ import os
 import numpy as np
 import h5py
 import torchvision.transforms as transforms
+import torch
 from utils import label_to_action
 
 from carla.client import make_carla_client, VehicleControl
@@ -15,6 +16,7 @@ from carla.sensor import Camera, Lidar
 from carla.settings import CarlaSettings
 from carla.tcp import TCPConnectionError
 from carla.util import print_over_same_line
+from agent.cagent import CBCAgent
 
 def distance_3d(pose1, pose2):
     return np.sqrt((pose1.x-pose2.x)**2 + (pose1.y-pose2.y)**2 + (pose1.z-pose2.z)**2)
@@ -36,7 +38,7 @@ def distance_3d(pose1, pose2):
 13 - HardRainSunset
 14 - SoftRainSunset
 '''
-def run_carla_eval(number_of_episodes, frames_per_episode, model, device, history, save_images, weather, vehicles, pedestians)
+def run_carla_eval(number_of_episodes, frames_per_episode, model, device, history, save_images, weather, vehicles, pedestians) :
     with make_carla_client("localhost", 2000) as client:
         print('carla client connected')
         # setting up transform
@@ -77,7 +79,7 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
             scene = client.load_settings(settings)
             number_of_player_starts = len(scene.player_start_spots)
             player_start = random.randint(0, max(0, number_of_player_starts - 1))
-            print("starting new episode ({})... frames saved".format(episode))
+            print("starting new episode ({})...".format(episode))
             client.start_episode(player_start)
             
             frames = torch.zeros(1, 3*history, 640, 480).float().to(device)
@@ -91,11 +93,11 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
             for frame_index in range(frames_per_episode):
                 measurements, sensor_data = client.read_data()
                 
-                print_measurements(measurements)
+                #print_measurements(measurements)
                 for name, measurement in sensor_data.items():
                     # capture one episode
-                    if save_images and episode == 0:
-                        filename ="{}_e{}_f{}".format(name, episode, frame_index)
+                    if save_images:
+                        filename ="{}_e{:02d}_f{:03d}".format(name, episode, frame_index)
                         measurement.save_to_disk(os.path.join("./data",filename))
 
                 
@@ -123,8 +125,11 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
                     frames[0, :3] = frame
                 
                 # getting agent predictions
-                out = torch.argmax(model.predict(frames).squeeze())
-                agent = np.ndarray(label_to_action(out))
+                model.net.eval()
+                out = model.predict(frames)
+                out = torch.argmax(out)
+                out = out.item()
+                agent = label_to_action(out)
 
                 # sending back agent's controls
                 control = VehicleControl()
@@ -139,8 +144,8 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
                 collision_vehicle += measurements.player_measurements.collision_vehicles
                 collision_pedestrian += measurements.player_measurements.collision_pedestrians
                 collision_other += measurements.player_measurements.collision_other
-                intersection_otherlane += 100 * player_measurements.intersection_otherlane
-                intersection_offroad += 100 * player_measurements.intersection_offroad
+                intersection_otherlane += 100 * measurements.player_measurements.intersection_otherlane
+                intersection_offroad += 100 * measurements.player_measurements.intersection_offroad
             
             avg_collision_vehicle.append(collision_vehicle / frames_per_episode)
             avg_collision_pedestrian.append(collision_pedestrian / frames_per_episode)
@@ -149,8 +154,6 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
             avg_intersection_offroad.append(intersection_offroad / frames_per_episode)
             
         return avg_collision_vehicle, avg_collision_pedestrian, avg_collision_other, avg_intersection_otherlane, avg_intersection_offroad
-
-
 
 
 def print_measurements(measurements):
@@ -173,7 +176,6 @@ def print_measurements(measurements):
         agents_num=number_of_agents)
     print_over_same_line(message)
 
-
 def evaluate_model(episodes, frames, model, device, history, save_images, weather, vehicles, pedestians):
     while True:
         try:
@@ -184,3 +186,19 @@ def evaluate_model(episodes, frames, model, device, history, save_images, weathe
         except TCPConnectionError as error:
             logging.error(error)
             time.sleep(1)
+
+if __name__ == "__main__":
+
+    device = torch.device('cpu')
+    agent = CBCAgent(device=device, history=1)
+    agent.net.load_state_dict(torch.load('snaps/july1_1_model_30'))
+    acv, acp, aco, aiol, aior = evaluate_model(10,250,agent,device,1,True,1,20,20)
+    for i in range(10):
+        os.system("ffmpeg -r 20 -i data/RGBFront_e{:02d}_f%03d.png -b 500000  data/episode_{}.mp4".format(i,i))
+
+    print("avg collision vehicle {}".format(sum(acv)/len(acv)))
+    print("avg collision pedestrain {}".format(sum(acp)/len(acp)))
+    print("avg collision other {}".format(sum(aco)/len(aco)))
+    print("avg intersection otherlane {}".format(sum(aiol)/len(aiol)))
+    print("avg intersection offroad {}".format(sum(aior)/len(aior)))
+                                
