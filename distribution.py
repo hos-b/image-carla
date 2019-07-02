@@ -27,3 +27,4 @@ for i in range(ds_count):
 print(count)
 
 # [63405. 10599. 10754. 31964.  5788. 12310.   210.     0.     0.]
+# SDL_VIDEODRIVER=offscreen ./CarlaUE4.sh -benchmark -fps=20 -carla-server -ResX=640 ResY=480 -windowed
