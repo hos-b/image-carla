@@ -7,6 +7,8 @@ import time
 import os
 import numpy as np
 import h5py
+import subprocess
+
 import torchvision.transforms as transforms
 import torch
 from utils import label_to_action
@@ -188,6 +190,12 @@ def evaluate_model(episodes, frames, model, device, history, save_images, weathe
             time.sleep(1)
 
 if __name__ == "__main__":
+    print("starting carla in server mode")
+    my_env = os.environ.copy()
+    my_env["SDL_VIDEODRIVER"] = "offscreen"
+    FNULL = open(os.devnull, 'w')
+    subprocess.Popen(['.././CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '-ResX=16', 'ResY=9'],stdout=FNULL, stderr=FNULL, env=my_env)
+    print("done")
 
     device = torch.device('cpu')
     agent = CBCAgent(device=device, history=1)
