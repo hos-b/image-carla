@@ -15,7 +15,7 @@ from evaluate import evaluate_model
 
 snapshot_dir = "./snaps"
 tensorboard_dir="./tensorboard"
-# train.py --weighted --snap -history=3 -bsize =8 -lr=5e-4 -name=july2_h3w -val_episodes=10 -val_frames=300
+# train.py --weighted --snap -history=3 -bsize=8 -lr=5e-4 -name=july2_h3w -val_episodes=10 -val_frames=300
 # arg parse ----------------------------------------------------------------------------------------------------------------------------------------
 parser = argparse.ArgumentParser()
 parser.add_argument('--cont', '-c', action = "store_true", dest="continute_training", default = False, help ='continue training')

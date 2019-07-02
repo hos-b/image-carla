@@ -52,13 +52,13 @@ class CarlaHDF5(torch.utils.data.Dataset):
         
         episode_key = ''
         frame_index = 0
-        last_cs = 0
+        last_cumsum = 0
         for i in range(self.ds_count) :
             if idx < self.cummulative_sizes[i]:
                 episode_key = self.keys[i]
-                frame_index = idx-last_cs
+                frame_index = idx-last_cumsum
                 break
-            last_cs = self.cummulative_sizes[i]
+            last_cumsum = self.cummulative_sizes[i]
         episode = self.data[episode_key]
         
         label = action_to_label(episode[frame_index, "label"])
