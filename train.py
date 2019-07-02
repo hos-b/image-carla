@@ -15,7 +15,7 @@ from evaluate import evaluate_model
 
 snapshot_dir = "./snaps"
 tensorboard_dir="./tensorboard"
-
+# train.py --weighted --snap -history=3 -bsize =8 -lr=5e-4 -name=july2_h3w -val_episodes=10 -val_frames=300
 # arg parse ----------------------------------------------------------------------------------------------------------------------------------------
 parser = argparse.ArgumentParser()
 parser.add_argument('--cont', '-c', action = "store_true", dest="continute_training", default = False, help ='continue training')
@@ -27,7 +27,7 @@ parser.add_argument('-epochs', type=int, dest="num_epochs", default=200, help='n
 # specific args for this training ------------------------------------------------------------------------------------------------------------------
 parser.add_argument("--weighted", action = "store_true", dest="weighted", default = False, help ='apply weights to loss function')
 parser.add_argument('-val_episodes', type=int, dest="val_episodes", default=10, help='run x validation episodes')
-parser.add_argument('-val_frames', type=int, dest="val_frames", default=10, help='run for x frames')
+parser.add_argument('-val_frames', type=int, dest="val_frames", default=300, help='run for x frames')
 parser.add_argument('-history', type=int, dest="history", default=1, help='number of previous frames to stack')
 args = parser.parse_args()
 print("settings:")
@@ -35,7 +35,7 @@ print("continute flag: {}\t save snaps :{}".format(args.continute_training,args.
 print("name :{}\t\t learning rate :{}".format(args.name,args.learning_rate))
 print("batch size :{}\t\t epochs :{}".format(args.batch_size,args.num_epochs))
 print("val eps :{}\t val frame :{}".format(args.val_episodes,args.val_frames)
-print("weighted :{}\t history :{}".format(args.weighted,args.history)
+print("weighted :{}\t history :{}".format(args.weighted,args.history))
 # loaders ------------------------------------------------------------------------------------------------------------------------------------------
 train_loader = get_data_loader(batch_size=args.batch_size, train=True, history=args.history, validation_episodes=10)
 val_loader   = get_data_loader(batch_size=args.batch_size, train=False, history=args.history, validation_episodes=10)
