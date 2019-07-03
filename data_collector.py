@@ -54,7 +54,7 @@ def run_carla_client(args, number_of_episodes=10, frames_per_episode=500, starti
                 settings.set(
                     SynchronousMode=True,
                     SendNonPlayerAgentsInfo=True,
-                    NumberOfVehicles=60,
+                    NumberOfVehicles=20,
                     NumberOfPedestrians=40,
                     WeatherId=1, # clear noon
                     QualityLevel='Low') # QualityLevel=args.quality_level
@@ -63,7 +63,7 @@ def run_carla_client(args, number_of_episodes=10, frames_per_episode=500, starti
                 camera = Camera('RGBFront', PostProcessing='SceneFinal')
                 camera.set_image_size(512, 512)
                 camera.set(FOV=120.0)
-                # camera.set_position(1.65, 0, 1.30)
+                # camera.set_position(1.65, 0, 1.30) < OLD
                 camera.set_position(2.0, 0, 1.60)
                 camera.set_rotation(roll=0, pitch=-10, yaw=0)
                 settings.add_sensor(camera)
@@ -76,7 +76,7 @@ def run_carla_client(args, number_of_episodes=10, frames_per_episode=500, starti
             scene = client.load_settings(settings)
             number_of_player_starts = len(scene.player_start_spots)
             # going through them one by one
-            player_start = episode%number_of_player_starts
+            player_start = episode % number_of_player_starts
             print("starting new episode ({})... {} frames saved".format(episode, total_frames))
             client.start_episode(player_start)
 
