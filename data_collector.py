@@ -7,6 +7,8 @@ import time
 import os
 import numpy as np
 import h5py
+import subprocess
+import sys
 
 from carla.client import make_carla_client
 from carla.sensor import Camera, Lidar
@@ -38,7 +40,7 @@ def run_carla_client(args, number_of_episodes=10, frames_per_episode=500, starti
     with make_carla_client("localhost", 2000) as client:
         print('carla client connected')
         # setting up data type
-        imitation_type = np.dtype([('image', np.uint8, (640, 480, 3)), ('label', np.float32, 5)])
+        imitation_type = np.dtype([('image', np.uint8, (512, 512, 3)), ('label', np.float32, 5)])
         print("datatype :\n{}".format(imitation_type))
         # total frames collected this run
         total_frames = 0
@@ -52,17 +54,18 @@ def run_carla_client(args, number_of_episodes=10, frames_per_episode=500, starti
                 settings.set(
                     SynchronousMode=True,
                     SendNonPlayerAgentsInfo=True,
-                    NumberOfVehicles=20,
+                    NumberOfVehicles=60,
                     NumberOfPedestrians=40,
                     WeatherId=1, # clear noon
                     QualityLevel='Low') # QualityLevel=args.quality_level
                 settings.randomize_seeds()
 
                 camera = Camera('RGBFront', PostProcessing='SceneFinal')
-                camera.set_image_size(640, 480)
-                camera.set(FOV=90.0)
-                camera.set_position(1.65, 0, 1.30)
-                camera.set_rotation(pitch=0, yaw=0, roll=0)
+                camera.set_image_size(512, 512)
+                camera.set(FOV=120.0)
+                # camera.set_position(1.65, 0, 1.30)
+                camera.set_position(2.0, 0, 1.60)
+                camera.set_rotation(roll=0, pitch=-10, yaw=0)
                 settings.add_sensor(camera)
             else:
                 # load settings from file
@@ -72,7 +75,8 @@ def run_carla_client(args, number_of_episodes=10, frames_per_episode=500, starti
             # choosing starting position, starting episode
             scene = client.load_settings(settings)
             number_of_player_starts = len(scene.player_start_spots)
-            player_start = random.randint(0, max(0, number_of_player_starts - 1))
+            # going through them one by one
+            player_start = episode%number_of_player_starts
             print("starting new episode ({})... {} frames saved".format(episode, total_frames))
             client.start_episode(player_start)
 
@@ -94,7 +98,7 @@ def run_carla_client(args, number_of_episodes=10, frames_per_episode=500, starti
                 # print_measurements(measurements)
                 for name, measurement in sensor_data.items():
                     if record and args.save_images_to_disk:
-                        filename ="{}_e{}_f{}".format(name, episode, frame_index)
+                        filename ="{}_e{}_f{:02d}".format(name, episode, frame_index)
                         measurement.save_to_disk(os.path.join("./data",filename))
 
                 # getting autopilot controls
@@ -175,7 +179,7 @@ def main():
 
     while True:
         try:
-            run_carla_client(args, number_of_episodes=210, frames_per_episode=700, starting_episode=start)
+            run_carla_client(args, number_of_episodes=110, frames_per_episode=700, starting_episode=start)
             print('Done.')
             return
         except TCPConnectionError as error:
@@ -184,6 +188,12 @@ def main():
 
 if __name__ == '__main__':
 
+    print("starting carla in server mode\n...")
+    my_env = os.environ.copy()
+    my_env["SDL_VIDEODRIVER"] = "offscreen"
+    FNULL = open(os.devnull, 'w')
+    subprocess.Popen(['.././CarlaUE4.sh', '/Game/Maps/Town02', '-benchmark', '-fps=20', '-carla-server', '-windowed', '-ResX=16', 'ResY=9'], stdout=FNULL, stderr=FNULL, env=my_env)
+    print("done")
     try:
         hdf5_file = h5py.File(os.path.join("/home/hosein/part","carla_dataset.hdf5"), "a")
         main()
