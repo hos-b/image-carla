@@ -50,7 +50,7 @@ if args.weighted:
 loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights).to(device)
 optimizer = optim.Adam(agent.net.parameters(), lr=args.learning_rate)
 
-# if flag --c is set, continute training from a previous snapshot ----------------------------------------------------------------------------------
+# if flag --cont is set, continute training from a previous snapshot ----------------------------------------------------------------------------------
 if(args.continute_training):
     print("continue flag set")
     try:
