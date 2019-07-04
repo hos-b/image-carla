@@ -46,7 +46,7 @@ device = torch.device('cuda')
 agent = CBCAgent(device=device, history=args.history)
 class_weights = torch.Tensor([1, 1, 1, 1, 1, 1, 1, 1, 1])
 if args.weighted:
-    class_weights = torch.Tensor([ 0.16960808,  1.01462402,  1.        ,  0.336441  ,  1.85798203, 0.8735987 , 51.20952381, 0.01, 0.01]).to(device)
+    class_weights = torch.Tensor([0.50829944,   1.20620843,   1.        ,   0.54104019,    1.065929  ,   0.96403628,  84.07272727, 0.001, 0.001]).to(device)
 loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights).to(device)
 optimizer = optim.Adam(agent.net.parameters(), lr=args.learning_rate)
 
@@ -112,9 +112,12 @@ for epoch in range(1,args.num_epochs+1):
     writer.add_scalar("avg collision other", sum(aco)/len(aco), epoch)
     writer.add_scalar("avg intersection otherlane", sum(aiol)/len(aiol), epoch)
     writer.add_scalar("avg intersection offroad", sum(aior)/len(aior), epoch)
-
-    # saving current val loss for shitty way of saving 'good' models
-    current_val_loss = loss_v/len(val_loader)
+[  0.50829944,   1.20620843,   1.        ,   0.54104019,
+         1.065929  ,   0.96403628,  84.07272727]
+    # saving current val los[  0.50829944,   1.20620843,   1.        ,   0.54104019,
+         1.065929  ,   0.96403628,  84.07272727]s for shitty way of saving 'good' models
+    current_val_loss = loss_[  0.50829944,   1.20620843,   1.        ,   0.54104019,
+         1.065929  ,   0.96403628,  84.07272727]v/len(val_loader)
     writer.add_scalar("epoch training loss", loss_t/len(train_loader), epoch)
     writer.add_scalar("epoch validation loss", current_val_loss, epoch)
 
