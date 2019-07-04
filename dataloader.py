@@ -84,9 +84,10 @@ def get_data_loader(batch_size=1, train=False, history=1, validation_episodes=5)
     if train :
         transform_list.append(transforms.ColorJitter(hue=.05, saturation=.05))
     # transform_list.append(transforms.Grayscale(num_output_channels=1))
+    transform_list.append(transforms.Resize(256))
     transform_list.append(transforms.ToTensor())
     transform_list.append(transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
-    transform_list.append(transforms.Resize(256))
+    
     transform = transforms.Compose(transform_list)
 
     reader = CarlaHDF5(train=train, history=history, transform=transform, validation_episodes=validation_episodes)
