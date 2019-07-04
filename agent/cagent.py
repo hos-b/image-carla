@@ -7,7 +7,7 @@ from agent.efficientnet_pytorch.model import EfficientNet
 class CBCAgent:
     
     def __init__(self, device = None, history=1):
-        self.net = ResNetAgent(classes=9, history=history)
+        self.net = EfficientNet.from_pretrained('efficientnet-b0', num_classes=9, history=history)
         self.net.to(device)
 
     @torch.no_grad()

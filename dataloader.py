@@ -63,7 +63,7 @@ class CarlaHDF5(torch.utils.data.Dataset):
         
         label = action_to_label(episode[frame_index, "label"])
         label = torch.LongTensor([label])
-        samples = torch.zeros(3*self.history, 640, 480).float()
+        samples = torch.zeros(3*self.history, 512, 512).float()
 
         for i in range(self.history):
             history_index = max(0, frame_index-i)
@@ -81,10 +81,12 @@ def get_data_loader(batch_size=1, train=False, history=1, validation_episodes=5)
     transform_list = []
     
     #if train:
-    #    transform_list.append(transforms.ColorJitter(hue=.05, saturation=.05))
+    transform_list.append(transforms.ColorJitter(hue=.05, saturation=.05))
     transform_list.append(transforms.ToPILImage())
+    # transform_list.append(transforms.Grayscale(num_output_channels=1))
     transform_list.append(transforms.ToTensor())
     transform_list.append(transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
+    transform_list.append(transforms.Resize(256))
     transform = transforms.Compose(transform_list)
 
     reader = CarlaHDF5(train=train, history=history, transform=transform, validation_episodes=validation_episodes)
