@@ -87,7 +87,7 @@ for epoch in range(1,args.num_epochs+1):
         frames = frames.to(device)
         agent.net.train()
         optimizer.zero_grad()
-        pred  = agent.net(frames,'')
+        pred  = agent.net(frames)
         loss = loss_fn(pred, labels.squeeze())
         loss.backward()
         loss_t += loss.item()
