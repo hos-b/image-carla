@@ -48,7 +48,7 @@ class CarlaHDF5(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         if self.data is None :
-            self.data = h5py.File(os.path.join(DATASET_DIR, PKG_NAME), "r")
+            self.data = h5py.File(os.path.join(DATASET_DIR, PKG_NAME), "r", libver="latest")
         
         episode_key = ''
         frame_index = 0
