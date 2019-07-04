@@ -63,7 +63,7 @@ class CarlaHDF5(torch.utils.data.Dataset):
         
         label = action_to_label(episode[frame_index, "label"])
         label = torch.LongTensor([label])
-        samples = torch.zeros(3*self.history, 512, 512).float()
+        samples = torch.zeros(3*self.history, 256, 256).float()
 
         for i in range(self.history):
             history_index = max(0, frame_index-i)
