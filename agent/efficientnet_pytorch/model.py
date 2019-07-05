@@ -105,13 +105,13 @@ class EfficientNet(nn.Module):
 
     """
 
-    def __init__(self, blocks_args=None, global_params=None, history=1):
+    def __init__(self, blocks_args=None, global_params=None, history=1, double):
         super().__init__()
         assert isinstance(blocks_args, list), 'blocks_args should be a list'
         assert len(blocks_args) > 0, 'block args must be greater than 0'
         self._global_params = global_params
         self._blocks_args = blocks_args
-
+        self.double = double
         # Get static or dynamic convolution depending on image size
         Conv2d = get_same_padding_conv2d(image_size=global_params.image_size)
 
@@ -151,7 +151,8 @@ class EfficientNet(nn.Module):
 
         # Final linear layer
         self._dropout = self._global_params.dropout_rate
-        self._fc = nn.Linear(out_channels, self._global_params.num_classes)
+        self._fc_classification = nn.Linear(out_channels, self._global_params.num_classes)
+        self._fc_regression = nn.Linear(out_channels, 1)
 
     def extract_features(self, inputs):
         """ Returns output of the final convolution layer """
@@ -185,10 +186,10 @@ class EfficientNet(nn.Module):
         return x
 
     @classmethod
-    def from_name(cls, model_name, override_params=None, history=1):
+    def from_name(cls, model_name, override_params=None, history=1, double=False):
         cls._check_model_name_is_valid(model_name)
         blocks_args, global_params = get_model_params(model_name, override_params)
-        return EfficientNet(blocks_args, global_params, history=history)
+        return EfficientNet(blocks_args, global_params, history=history, double=double)
 
     @classmethod
     def from_pretrained(cls, model_name, num_classes=1000):

@@ -2,7 +2,6 @@ import torch.nn as nn
 import torchvision.models as models
 import torch.utils.model_zoo as model_zoo
 from torchvision.models.resnet import ResNet, BasicBlock, model_urls
-
 """
 Imitation learning network
 """
@@ -53,3 +52,5 @@ class ResNetAgent(nn.Module):
         x = self.relu(x)
         x = self.fc2(x)
         return x
+    
+    

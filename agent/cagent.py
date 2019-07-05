@@ -9,6 +9,8 @@ class CBCAgent:
     def __init__(self, device = None, history=1, name=''):
         if name=='resnet18':
             self.net = ResNetAgent(classes=9, history=history)
+        elif name=='efficient-double' :
+            self.net = EfficientNet.from_name('efficientnet-b0', {'num_classes': 9}, history=history)
         else :
             self.net = EfficientNet.from_name('efficientnet-b0', {'num_classes': 9}, history=history)
         self.net.to(device)
