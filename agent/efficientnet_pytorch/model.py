@@ -186,6 +186,7 @@ class EfficientNet(nn.Module):
         if self.double :
             x_class = self._fc_classification(x)
             x_regress = F.tanh(self._fc_regression(x))
+            return x_class, x_regress
         else :
             x = self._fc_classification(x)
             return x
