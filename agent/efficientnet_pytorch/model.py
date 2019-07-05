@@ -105,7 +105,7 @@ class EfficientNet(nn.Module):
 
     """
 
-    def __init__(self, blocks_args=None, global_params=None, history=1, double):
+    def __init__(self, blocks_args=None, global_params=None, history=1, double=False):
         super().__init__()
         assert isinstance(blocks_args, list), 'blocks_args should be a list'
         assert len(blocks_args) > 0, 'block args must be greater than 0'
@@ -182,8 +182,13 @@ class EfficientNet(nn.Module):
         x = F.adaptive_avg_pool2d(x, 1).squeeze(-1).squeeze(-1)
         if self._dropout:
             x = F.dropout(x, p=self._dropout, training=self.training)
-        x = self._fc(x)
-        return x
+
+        if self.double :
+            x_class = self._fc_classification(x)
+            x_regress = F.tanh(self._fc_regression(x))
+        else :
+            x = self._fc_classification(x)
+            return x
 
     @classmethod
     def from_name(cls, model_name, override_params=None, history=1, double=False):

@@ -198,7 +198,7 @@ if __name__ == "__main__":
     print("done")
 
     device = torch.device('cuda')
-    agent = CBCAgent(device=device, history=1)
+    agent = CBCAgent(device=device, history=1, name='resnet18')
     agent.net.load_state_dict(torch.load('snaps/july2_h1w_model_21'))
     acv, acp, aco, aiol, aior = evaluate_model(10,250,agent,device,1,True,1,20,20)
     for i in range(10):
