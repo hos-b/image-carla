@@ -197,6 +197,7 @@ if __name__ == '__main__':
     try:
         hdf5_file = h5py.File(os.path.join("/home/hosein/part","carla_dataset.hdf5"), "a")
         main()
+        hdf5_file.close()
     except KeyboardInterrupt:
         print("closing hdf5 file")
         hdf5_file.close()

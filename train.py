@@ -120,7 +120,7 @@ for epoch in range(1,args.num_epochs+1):
     if args.save_snaps :
         save_path = os.path.join(snapshot_dir,args.name)
         torch.save(optimizer.state_dict(), save_path+"_optimizer")
-        if  current_val_loss < lowest_loss or epoch%5==0 or current_val_loss <1:
+        if  current_val_loss < lowest_loss or epoch%5==0:
             if current_val_loss < lowest_loss:
                 lowest_loss = current_val_loss
             agent.save(save_path+"_model_{}".format(epoch))
