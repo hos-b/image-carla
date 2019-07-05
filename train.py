@@ -43,7 +43,7 @@ val_loader   = get_data_loader(batch_size=args.batch_size, train=False, history=
 # setting up training device, agent, optimizer, weights --------------------------------------------------------------------------------------------
 print("initializing agent, cuda, loss, optim")
 device = torch.device('cuda')
-agent = CBCAgent(device=device, history=args.history)
+agent = CBCAgent(device=device, history=args.history, name='efficientnet')
 class_weights = torch.Tensor([1, 1, 1, 1, 1, 1, 1, 1, 1])
 if args.weighted:
     class_weights = torch.Tensor([0.50829944,   1.20620843,   1.        ,   0.54104019,    1.065929  ,   0.96403628,  84.07272727, 0.001, 0.001]).to(device)
@@ -124,7 +124,7 @@ for epoch in range(1,args.num_epochs+1):
         if  current_val_loss < lowest_loss or epoch%5==0 or current_val_loss <1:
             if current_val_loss < lowest_loss:
                 lowest_loss = current_val_loss
-            torch.save(agent.net.state_dict(), save_path+"_model_{}".format(epoch))
+            agent.save(save_path+"_model_{}".format(epoch))
             print("saved snapshot at epoch {}".format(epoch))
             
 writer.close()

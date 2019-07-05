@@ -135,8 +135,8 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
 
                 # sending back agent's controls
                 control = VehicleControl()
-                control.steer = agent[0]
-                control.throttle = agent[1]
+                control.steer = agent[0]/3.0
+                control.throttle = agent[1] if measurements.player_measurements.forward_speed * 3.6 <=40 else 0
                 control.brake = agent[2]
                 control.hand_brake = False
                 control.reverse = False

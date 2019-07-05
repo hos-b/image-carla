@@ -16,3 +16,6 @@ class CBCAgent:
     @torch.no_grad()
     def predict(self, frames):
         return self.net(frames)
+    def save(self, filepath):
+        torch.save(self.net.state_dict(), filepath)
+
