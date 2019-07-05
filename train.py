@@ -88,7 +88,7 @@ for epoch in range(1,args.num_epochs+1):
         agent.net.train()
         optimizer.zero_grad()
         pred  = agent.net(frames)
-        loss = loss_fn(pred, labels.squeeze())
+        loss = loss_fn(pred, labels.squeeze(1))
         loss.backward()
         loss_t += loss.item()
         optimizer.step()
@@ -101,7 +101,7 @@ for epoch in range(1,args.num_epochs+1):
         frames = frames.to(device)
         agent.net.eval()
         pred = agent.predict(frames)
-        loss = loss_fn(pred, labels.squeeze())
+        loss = loss_fn(pred, labels.squeeze(1))
         loss_v += loss.item()
     
     # running 10 validation episodes with the current model
