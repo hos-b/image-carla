@@ -103,7 +103,6 @@ for epoch in range(1,args.num_epochs+1):
         optimizer.step()
         writer.add_scalar("iteration/classification", loss_cls.item(), (epoch-1)*len(train_loader)+idx)
         writer.add_scalar("iteration/regression", loss_reg.item(), (epoch-1)*len(train_loader)+idx)
-        break
 
     if args.dagger:
         reg_loss_dagger, cls_loss_dagger = dagger(frames=args.dagger_frames, model=agent, device=device, optimizer=optimizer, closs=classification_loss,
@@ -123,7 +122,6 @@ for epoch in range(1,args.num_epochs+1):
         loss_reg = regression_loss(pred_reg, steer)
         reg_loss_v += loss_reg.item()
         cls_loss_v += loss_cls.item()
-        break
     
     
     # running 10 validation episodes with the current model

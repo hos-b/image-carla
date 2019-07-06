@@ -83,7 +83,6 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
             scene = client.load_settings(settings)
             number_of_player_starts = len(scene.player_start_spots)
             player_start = random.randint(0, max(0, number_of_player_starts - 1))
-            print("starting new episode ({})...".format(episode))
             client.start_episode(player_start)
             
             frames = torch.zeros(1, 3*history, 256, 256).float().to(device)
@@ -160,6 +159,8 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
                     cls_loss_dagger += loss_cls.item()
                     optimizer.step()
                     trained_frames +=1
+                    if trained_frames>= total_frames:
+                        break
 
             
         return reg_loss_dagger, cls_loss_dagger
