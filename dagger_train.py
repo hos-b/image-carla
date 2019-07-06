@@ -41,7 +41,7 @@ def distance_3d(pose1, pose2):
 13 - HardRainSunset
 14 - SoftRainSunset
 '''
-def run_carla_train(total_frames, model, device, optimizer, history, save_images, vehicles, pedestians) :
+def run_carla_train(total_frames, model, device, optimizer, history, weather, vehicles, pedestians) :
     with make_carla_client("localhost", 2000) as client:
         print('carla client connected')
         # setting up transform
@@ -146,8 +146,8 @@ def run_carla_train(total_frames, model, device, optimizer, history, save_images
                     print_over_same_line("dagger frame {}/{}".format(trained_frames,total_frames))
                     label = 0 if expert[1] > 0 else \
                             1 if expert[2] > 0 else 2
-                    label = torch.LongTensor([label])
-                    steer = torch.Tensor([expert[0]])
+                    label = torch.LongTensor([label]).to(device)
+                    steer = torch.Tensor([expert[0]]).to(device)
 
                     model.net.train()
                     optimizer.zero_grad()

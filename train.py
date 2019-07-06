@@ -105,6 +105,12 @@ for epoch in range(1,args.num_epochs+1):
         writer.add_scalar("iteration/regression", loss_reg.item(), (epoch-1)*len(train_loader)+idx)
         break
 
+    if args.dagger:
+        reg_loss_dagger, cls_loss_dagger = dagger(frames=args.dagger_frames, model=agent, device=device, optimizer=optimizer, 
+                                                  history=args.history, weather=1, vehicles=30, pedestians=30)
+        writer.add_scalar("training/dagger_regression", reg_loss_dagger/args.dagger_frames, epoch)
+        writer.add_scalar("training/dagger_classification", cls_loss_dagger/args.dagger_frames, epoch)
+
     # validation episodes
     for idx, (steer, labels, frames) in enumerate(val_loader) :
         print_over_same_line("validation batch {}/{}".format(idx, len(val_loader)))
@@ -117,12 +123,9 @@ for epoch in range(1,args.num_epochs+1):
         loss_reg = regression_loss(pred_reg, steer)
         reg_loss_v += loss_reg.item()
         cls_loss_v += loss_cls.item()
+        break
     
-    if args.dagger:
-        reg_loss_dagger, cls_loss_dagger = dagger(frames=args.dagger_frames, model=agent, device=device, optimizer=optimizer, 
-                                                  history=args.history, weather=1, vehicles=30, pedestians=30)
-        writer.add_scalar("training/dagger_regression", reg_loss_dagger/args.dagger_frames, epoch)
-        writer.add_scalar("training/dagger_classification", cls_loss_dagger/args.dagger_frames, epoch)
+    
     # running 10 validation episodes with the current model
     acv, acp, aco, aiol, aior = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, 
                                                history=args.history, save_images=False, weather=1, vehicles=30, pedestians=30)
