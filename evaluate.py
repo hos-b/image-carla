@@ -44,13 +44,14 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
     with make_carla_client("localhost", 2000) as client:
         print('carla client connected')
         # setting up transform
+        transform_list = []
         transform_list.append(transforms.ToPILImage())
         # transform_list.append(transforms.Grayscale(num_output_channels=1))
         transform_list.append(transforms.Resize(256))
         transform_list.append(transforms.ToTensor())
         transform_list.append(transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
         transform = transforms.Compose(transform_list)
-        
+
         # statistics to return
         avg_collision_vehicle = []
         avg_collision_pedestrian = []
@@ -103,7 +104,6 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
                         filename ="{}_e{:02d}_f{:03d}".format(name, episode, frame_index)
                         measurement.save_to_disk(os.path.join("./data",filename))
 
-                
                 # SDL_VIDEODRIVER = offscreen
                 # getting expert controls
                 control = measurements.player_measurements.autopilot_control

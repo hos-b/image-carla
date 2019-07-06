@@ -45,8 +45,9 @@ def run_carla_train(frames_per_episode, model, device, optimizer, history, save_
         print('carla client connected')
         # setting up transform
         transform_list = []
-        # transform_list.append(transforms.ColorJitter(hue=.05, saturation=.05))
         transform_list.append(transforms.ToPILImage())
+        # transform_list.append(transforms.Grayscale(num_output_channels=1))
+        transform_list.append(transforms.Resize(256))
         transform_list.append(transforms.ToTensor())
         transform_list.append(transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
         transform = transforms.Compose(transform_list)
@@ -71,9 +72,10 @@ def run_carla_train(frames_per_episode, model, device, optimizer, history, save_
 
             camera = Camera('RGBFront', PostProcessing='SceneFinal')
             camera.set_image_size(512, 512)
-            camera.set(FOV=90.0)
-            camera.set_position(1.65, 0, 1.30)
-            camera.set_rotation(pitch=0, yaw=0, roll=0)
+            camera.set(FOV=120.0)
+            # camera.set_position(1.65, 0, 1.30) < OLD
+            camera.set_position(2.0, 0, 1.60)
+            camera.set_rotation(roll=0, pitch=-10, yaw=0)
             settings.add_sensor(camera)
             
             
@@ -84,7 +86,7 @@ def run_carla_train(frames_per_episode, model, device, optimizer, history, save_
             print("starting new episode ({})...".format(episode))
             client.start_episode(player_start)
             
-            frames = torch.zeros(1, 3*history, 640, 480).float().to(device)
+            frames = torch.zeros(1, 3*history, 512, 512).float().to(device)
 
             collision_vehicle = 0
             collision_pedestrian = 0

@@ -80,7 +80,6 @@ class CarlaHDF5(torch.utils.data.Dataset):
 def get_data_loader(batch_size=1, train=False, history=1, validation_episodes=5):
 
     transform_list = []
-
     transform_list.append(transforms.ToPILImage())
     if train :
         transform_list.append(transforms.ColorJitter(hue=.05, saturation=.05))
@@ -88,7 +87,6 @@ def get_data_loader(batch_size=1, train=False, history=1, validation_episodes=5)
     transform_list.append(transforms.Resize(256))
     transform_list.append(transforms.ToTensor())
     transform_list.append(transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
-    
     transform = transforms.Compose(transform_list)
 
     reader = CarlaHDF5(train=train, history=history, transform=transform, validation_episodes=validation_episodes)
