@@ -43,9 +43,9 @@ val_loader   = get_data_loader(batch_size=args.batch_size, train=False, history=
 print("initializing agent, cuda, loss, optim")
 device = torch.device('cuda')
 agent = CBCAgent(device=device, history=args.history, name='efficient-double')
-class_weights = torch.Tensor([1, 1, 1, 1, 1, 1, 1, 1, 1])
+class_weights = torch.Tensor([1, 1, 1])
 if args.weighted:
-    class_weights = torch.Tensor([0.50829944,   1.20620843,   1.        ,   0.54104019,    1.065929  ,   0.96403628,  84.07272727, 0.001, 0.001]).to(device)
+    class_weights = torch.Tensor([  1.        ,   0.99284543, 319.17272727]).to(device)
 classification_loss = torch.nn.CrossEntropyLoss(weight=class_weights).to(device)
 regression_loss = torch.nn.MSELoss(reduction='none')
 optimizer = optim.Adam(agent.net.parameters(), lr=args.learning_rate)
