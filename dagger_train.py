@@ -147,7 +147,7 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
                     label = 0 if expert[1] > 0 else \
                             1 if expert[2] > 0 else 2
                     label = torch.LongTensor([label]).to(device)
-                    steer = torch.Tensor([expert[0]]).to(device)
+                    steer = torch.Tensor([expert[0]]).unsqueeze().to(device)
 
                     model.net.train()
                     optimizer.zero_grad()
