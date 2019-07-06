@@ -93,6 +93,7 @@ def run_carla_train(total_frames, model, device, optimizer, history, save_images
                 
                 # checking whether the episode should end (i.e. car crash or fucked up stuff)
                 # measurements.player_measurements.collision_pedestrians doesn't matter. fuck pedestrians
+                print("{} type {}".format(measurements.player_measurements.collision_vehicles,type(measurements.player_measurements.collision_vehicles)))
                 if  measurements.player_measurements.collision_vehicles > 0
                     or measurements.player_measurements.collision_other > 0
                     or measurements.player_measurements.intersection_otherlane > 0.30
