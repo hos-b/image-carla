@@ -63,7 +63,7 @@ class CarlaHDF5(torch.utils.data.Dataset):
         
         label, steer = action_to_label_double(episode[frame_index, "label"])
         label = torch.LongTensor([label])
-        steer = torch.LongTensor([steer])
+        steer = torch.Tensor([steer])
         samples = torch.zeros(3*self.history, 256, 256).float()
 
         for i in range(self.history):
