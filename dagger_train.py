@@ -15,10 +15,10 @@ from utils import label_to_action_dobule
 from utils import compare_controls
 from utils import print_over_same_line
 
-from carla.client import make_carla_client, VehicleControl
-from carla.sensor import Camera, Lidar
-from carla.settings import CarlaSettings
-from carla.tcp import TCPConnectionError
+from server.PythonClient.carla.client import make_carla_client, VehicleControl
+from server.PythonClient.carla.sensor import Camera, Lidar
+from server.PythonClient.carla.settings import CarlaSettings
+from server.PythonClient.carla.tcp import TCPConnectionError
 from agent.cagent import CBCAgent
 
 def distance_3d(pose1, pose2):
