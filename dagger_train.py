@@ -12,12 +12,13 @@ import subprocess
 import torchvision.transforms as transforms
 import torch
 from utils import label_to_action_dobule
+from utils import compare_controls
+from utils import print_over_same_line
 
 from carla.client import make_carla_client, VehicleControl
 from carla.sensor import Camera, Lidar
 from carla.settings import CarlaSettings
 from carla.tcp import TCPConnectionError
-from carla.util import print_over_same_line
 from agent.cagent import CBCAgent
 
 def distance_3d(pose1, pose2):
@@ -40,26 +41,26 @@ def distance_3d(pose1, pose2):
 13 - HardRainSunset
 14 - SoftRainSunset
 '''
-def run_carla_train(frames_per_episode, model, device, optimizer, history, save_images, vehicles, pedestians) :
+def run_carla_train(total_frames, model, device, optimizer, history, save_images, vehicles, pedestians) :
     with make_carla_client("localhost", 2000) as client:
         print('carla client connected')
         # setting up transform
         transform_list = []
         transform_list.append(transforms.ToPILImage())
-        # transform_list.append(transforms.Grayscale(num_output_channels=1))
         transform_list.append(transforms.Resize(256))
         transform_list.append(transforms.ToTensor())
         transform_list.append(transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
         transform = transforms.Compose(transform_list)
-
-        # statistics to return
-        avg_collision_vehicle = []
-        avg_collision_pedestrian = []
-        avg_collision_other = []
-        avg_intersection_otherlane = []
-        avg_intersection_offroad = []
-        for episode in range(number_of_episodes):
-            # settings
+        # loss values to return
+        reg_loss_dagger = 0
+        cls_loss_dagger = 0
+        # frames trained
+        trained_frames = 0
+        for episode in range(10000):
+            # dagger end
+            if trained_frames >= total_frames:
+                break
+            # settings to send to carla
             settings = CarlaSettings()
             settings.set(
                 SynchronousMode=True,
@@ -73,7 +74,6 @@ def run_carla_train(frames_per_episode, model, device, optimizer, history, save_
             camera = Camera('RGBFront', PostProcessing='SceneFinal')
             camera.set_image_size(512, 512)
             camera.set(FOV=120.0)
-            # camera.set_position(1.65, 0, 1.30) < OLD
             camera.set_position(2.0, 0, 1.60)
             camera.set_rotation(roll=0, pitch=-10, yaw=0)
             settings.add_sensor(camera)
@@ -86,40 +86,28 @@ def run_carla_train(frames_per_episode, model, device, optimizer, history, save_
             print("starting new episode ({})...".format(episode))
             client.start_episode(player_start)
             
-            frames = torch.zeros(1, 3*history, 512, 512).float().to(device)
-
-            collision_vehicle = 0
-            collision_pedestrian = 0
-            collision_other = 0
-            intersection_otherlane = 0
-            intersection_offroad = 0
+            frames = torch.zeros(1, 3*history, 256, 256).float().to(device)
             # execute frames
-            for frame_index in range(frames_per_episode):
+            for frame_index in range(1000):
                 measurements, sensor_data = client.read_data()
                 
-                # checking whether the episode should end (i.e. car carsh or fucked up stuff)
+                # checking whether the episode should end (i.e. car crash or fucked up stuff)
                 # measurements.player_measurements.collision_pedestrians doesn't matter. fuck pedestrians
                 if  measurements.player_measurements.collision_vehicles > 0
                     or measurements.player_measurements.collision_other > 0
                     or measurements.player_measurements.intersection_otherlane > 0.30
-                    or measurements.player_measurements.intersection_offroad > 0.30 :
+                    or measurements.player_measurements.intersection_offroad > 0.30 
+                    or measurements.player_measurements.autopilot_control.hand_brake
+                    or measurements.player_measurements.autopilot_control.reverse :
                     break
-                #print_measurements(measurements)
-                for name, measurement in sensor_data.items():
-                    # capture one episode
-                    if save_images:
-                        filename ="{}_e{:02d}_f{:03d}".format(name, episode, frame_index)
-                        measurement.save_to_disk(os.path.join("./data",filename))
 
-                
                 # getting expert controls
                 control = measurements.player_measurements.autopilot_control
                 expert = np.ndarray(shape=(3,), dtype = np.float32)
-                control.steer = control.steer if np.abs(control.steer)>5e-4 else 0
+                control.steer = control.steer if np.abs(control.steer)>1e-3 else 0
                 expert[0] = control.steer
                 expert[1] = control.throttle
                 expert[2] = control.brake
-
                 # convering current frame
                 frame = sensor_data['RGBFront'].data
                 frame = np.transpose(frame, (1, 0, 2))
@@ -141,46 +129,47 @@ def run_carla_train(frames_per_episode, model, device, optimizer, history, save_
                 pred_cls = pred_cls.item()
                 pred_reg = pred_reg.item()
                 agent = label_to_action_dobule(pred_cls)
+                agent[0] = pred_reg
 
                 # sending back agent's controls
                 control = VehicleControl()
-                control.steer = pred_reg
-                control.throttle = agent[0] if measurements.player_measurements.forward_speed * 3.6 <=40 else 0
-                control.brake = agent[1]
+                control.steer = agent[0]
+                control.throttle = agent[1] if measurements.player_measurements.forward_speed * 3.6 <=40 else 0
+                control.brake = agent[2]
                 control.hand_brake = False
                 control.reverse = False
                 client.send_control(control)
+
+                # comparing controls (should we train this ?)
+                if compare_controls(expert=expert, agent=agent) :
+                    print_over_same_line("dagger frame {}/{}".format(trained_frames,total_frames))
+                    label = 0 if expert[1] > 0 else \
+                            1 if expert[2] > 0 else 2
+                    label = torch.LongTensor([label])
+                    steer = torch.Tensor([expert[0]])
+
+                    model.net.train()
+                    optimizer.zero_grad()
+                    pred_cls, pred_reg  = model.net(frames)
+                    loss_cls = classification_loss(pred_cls, label)
+                    loss_reg = regression_loss(pred_reg, steer)
+                    loss_cls.backward(retain_graph=True)
+                    loss_reg.backward()
+                    reg_loss_dagger += loss_reg.item()
+                    cls_loss_dagger += loss_cls.item()
+                    optimizer.step()
+                    trained_frames +=1
+
             
-        return avg_collision_vehicle, avg_collision_pedestrian, avg_collision_other, avg_intersection_otherlane, avg_intersection_offroad
-
-
-def print_measurements(measurements):
-    number_of_agents = len(measurements.non_player_agents)
-    player_measurements = measurements.player_measurements
-    message = 'Vehicle at ({pos_x:.1f}, {pos_y:.1f}), '
-    message += '{speed:.0f} km/h, '
-    message += 'Collision: {{vehicles={col_cars:.0f}, pedestrians={col_ped:.0f}, other={col_other:.0f}}}, '
-    message += '{other_lane:.0f}% other lane, {offroad:.0f}% off-road, '
-    message += '({agents_num:d} non-player agents in the scene)'
-    message = message.format(
-        pos_x=player_measurements.transform.location.x,
-        pos_y=player_measurements.transform.location.y,
-        speed=player_measurements.forward_speed * 3.6, # m/s -> km/h
-        col_cars=player_measurements.collision_vehicles,
-        col_ped=player_measurements.collision_pedestrians,
-        col_other=player_measurements.collision_other,
-        other_lane=100 * player_measurements.intersection_otherlane,
-        offroad=100 * player_measurements.intersection_offroad,
-        agents_num=number_of_agents)
-    print_over_same_line(message)
+        return reg_loss_dagger, cls_loss_dagger
 
 def dagger(frames, model, device, optimizer, history, weather, vehicles, pedestians):
     while True:
         try:
-            acv, acp, aco, aiol, aior = run_carla_train(frames_per_episode=frames, model=model, device=device, optimizer=optimizer, history=history,
+            reg_loss_dagger, cls_loss_dagger = run_carla_train(total_frames=frames, model=model, device=device, optimizer=optimizer, history=history,
                                                         weather=weather, vehicles=vehicles, pedestians=pedestians)
             print('Done.')
-            return acv, acp, aco, aiol, aior
+            return reg_loss_dagger, cls_loss_dagger
         except TCPConnectionError as error:
             logging.error(error)
             time.sleep(1)

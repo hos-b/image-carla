@@ -11,6 +11,7 @@ from tensorboardX import SummaryWriter
 from agent.cagent import CBCAgent
 from utils import print_over_same_line
 from evaluate import evaluate_model
+from dagger_train import dagger
 
 snapshot_dir = "./snaps"
 tensorboard_dir="./tensorboard"
@@ -25,16 +26,19 @@ parser.add_argument('-bsize', type=int, dest="batch_size", default=16, help='bat
 parser.add_argument('-epochs', type=int, dest="num_epochs", default=200, help='number of epochs')
 # specific args for this training ------------------------------------------------------------------------------------------------------------------
 parser.add_argument("--weighted", action = "store_true", dest="weighted", default = False, help ='apply weights to loss function')
+parser.add_argument("--dagger", action = "store_true", dest="dagger", default = False, help ='perform dagger after each epoch')
+parser.add_argument('-dagger_frames', type=int, dest="dagger_frames", default=1000, help='number of dagger frames to train')
 parser.add_argument('-val_episodes', type=int, dest="val_episodes", default=10, help='run x validation episodes')
 parser.add_argument('-val_frames', type=int, dest="val_frames", default=300, help='run for x frames')
 parser.add_argument('-history', type=int, dest="history", default=1, help='number of previous frames to stack')
 args = parser.parse_args()
 print("settings:")
-print("continute flag: {}\t save snaps :{}".format(args.continute_training,args.save_snaps))
-print("name :{}\t\t learning rate :{}".format(args.name,args.learning_rate))
-print("batch size :{}\t\t epochs :{}".format(args.batch_size,args.num_epochs))
-print("val eps :{}\t val frame :{}".format(args.val_episodes,args.val_frames))
-print("weighted :{}\t\t history :{}".format(args.weighted,args.history))
+print("continute flag : {}\t save snaps : {}".format(args.continute_training,args.save_snaps))
+print("name : {}\t\t learning rate : {}".format(args.name,args.learning_rate))
+print("batch size : {}\t\t epochs : {}".format(args.batch_size,args.num_epochs))
+print("val eps : {}\t val frame : {}".format(args.val_episodes,args.val_frames))
+print("weighted : {}\t\t history : {}".format(args.weighted,args.history))
+print("dagger : {} \t\t dagger frames : {}".format(args.dagger,args.dagger_frames))
 # loaders ------------------------------------------------------------------------------------------------------------------------------------------
 train_loader = get_data_loader(batch_size=args.batch_size, train=True, history=args.history, validation_episodes=10)
 val_loader   = get_data_loader(batch_size=args.batch_size, train=False, history=args.history, validation_episodes=10)
@@ -113,9 +117,14 @@ for epoch in range(1,args.num_epochs+1):
         reg_loss_v += loss_reg.item()
         cls_loss_v += loss_cls.item()
     
+    if args.dagger:
+        reg_loss_dagger, cls_loss_dagger = dagger(frames=args.dagger_frames, model=agent, device=device, optimizer=optimizer, 
+                                                  history=args.history, weather=1 vehicles=30, pedestians=30)
+        writer.add_scalar("training/dagger_regression", reg_loss_dagger/args.dagger_frames, epoch)
+        writer.add_scalar("training/dagger_classification", cls_loss_dagger/args.dagger_frames, epoch)
     # running 10 validation episodes with the current model
     acv, acp, aco, aiol, aior = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, 
-                                               history=args.history, save_images=False, weather=1, vehicles=20, pedestians=40)
+                                               history=args.history, save_images=False, weather=1, vehicles=30, pedestians=30)
     writer.add_scalar("carla/vehicle_collision", sum(acv)/len(acv), epoch)
     writer.add_scalar("carla/pedestrian_collision", sum(acp)/len(acp), epoch)
     writer.add_scalar("carla/other_collision", sum(aco)/len(aco), epoch)

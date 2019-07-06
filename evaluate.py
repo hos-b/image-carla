@@ -108,7 +108,7 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
                 # getting expert controls
                 control = measurements.player_measurements.autopilot_control
                 expert = np.ndarray(shape=(3,), dtype = np.float32)
-                control.steer = control.steer if np.abs(control.steer)>5e-4 else 0
+                control.steer = control.steer if np.abs(control.steer)>1e-3 else 0
                 expert[0] = control.steer
                 expert[1] = control.throttle
                 expert[2] = control.brake
@@ -138,8 +138,8 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
                 # sending back agent's controls
                 control = VehicleControl()
                 control.steer = pred_reg
-                control.throttle = agent[0] if measurements.player_measurements.forward_speed * 3.6 <=40 else 0
-                control.brake = agent[1]
+                control.throttle = agent[1] if measurements.player_measurements.forward_speed * 3.6 <=40 else 0
+                control.brake = agent[2]
                 control.hand_brake = False
                 control.reverse = False
                 client.send_control(control)

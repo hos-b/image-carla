@@ -96,14 +96,26 @@ def action_to_label_double(action):
     # no-op = 2
 
 def label_to_action_dobule(label) :
-    action = [0.0, 0.0]
+    action = [0.0, 0.0, 0.0]
     if label == 0 :
-        action = [1.0, 0.0]
+        action = [0.0, 1.0, 0.0]
     elif label==1 :
-        action = [0.0, 1.0]
+        action = [0.0, 0.0, 1.0]
     else :
-        action = [0.0, 0.0]
+        action = [0.0, 0.0, 0.0]
     return action
 
-def compare_controls(set1, set2) :
-    pass
+def compare_controls(expert, agent) :
+    # steering in opposite directions
+    if agent[0]*expert[0] < 0:
+        return True
+    # wrong rotation or wrong idle mode
+    if (expert[0]==0 and agent[0]!=0) or (expert[0]!=0 and agent[0]==0):
+        return True
+    # wrong throttle
+    if (expert[1]==0 and agent[1]!=0) or (expert[1]!=0 and agent[1]==0):
+        return True
+    # wrong brake
+    if (expert[2]==0 and agent[2]!=0) or (expert[2]!=0 and agent[2]==0):
+        return True
+    return False
