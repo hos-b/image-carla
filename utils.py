@@ -81,7 +81,7 @@ def action_to_label_double(action):
     if action[3] != 0 or action[4]!= 0 :
         print ("bizarre expert action! handbrake {}, reverse {}".format(action[3], action[4]))
     # normal cases
-    steer = action[0] if np.abs(action[0]) > 1e-2 else 0
+    steer = action[0] if np.abs(action[0]) > 1e-3 else 0
     throttle = action[1]>0
     brake = action[2]>0
 

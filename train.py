@@ -34,9 +34,9 @@ parser.add_argument('-history', type=int, dest="history", default=1, help='numbe
 args = parser.parse_args()
 print("settings:")
 print("continute flag : {}\t save snaps : {}".format(args.continute_training,args.save_snaps))
-print("name : {}\t\t learning rate : {}".format(args.name,args.learning_rate))
+print("name : {}\t learning rate : {}".format(args.name,args.learning_rate))
 print("batch size : {}\t\t epochs : {}".format(args.batch_size,args.num_epochs))
-print("val eps : {}\t val frame : {}".format(args.val_episodes,args.val_frames))
+print("val eps : {}\t\t val frame : {}".format(args.val_episodes,args.val_frames))
 print("weighted : {}\t\t history : {}".format(args.weighted,args.history))
 print("dagger : {} \t\t dagger frames : {}".format(args.dagger,args.dagger_frames))
 # loaders ------------------------------------------------------------------------------------------------------------------------------------------
