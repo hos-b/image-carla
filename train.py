@@ -106,8 +106,8 @@ for epoch in range(1,args.num_epochs+1):
         break
 
     if args.dagger:
-        reg_loss_dagger, cls_loss_dagger = dagger(frames=args.dagger_frames, model=agent, device=device, optimizer=optimizer, 
-                                                  history=args.history, weather=1, vehicles=30, pedestians=30)
+        reg_loss_dagger, cls_loss_dagger = dagger(frames=args.dagger_frames, model=agent, device=device, optimizer=optimizer, closs=classification_loss,
+                                                  rloss=regression_loss, history=args.history, weather=1, vehicles=30, pedestians=30)
         writer.add_scalar("training/dagger_regression", reg_loss_dagger/args.dagger_frames, epoch)
         writer.add_scalar("training/dagger_classification", cls_loss_dagger/args.dagger_frames, epoch)
 

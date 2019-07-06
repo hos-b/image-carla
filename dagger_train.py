@@ -41,7 +41,7 @@ def distance_3d(pose1, pose2):
 13 - HardRainSunset
 14 - SoftRainSunset
 '''
-def run_carla_train(total_frames, model, device, optimizer, history, weather, vehicles, pedestians) :
+def run_carla_train(total_frames, model, device, optimizer, closs, rloss, history, weather, vehicles, pedestians) :
     with make_carla_client("localhost", 2000) as client:
         print('carla client connected')
         # setting up transform
@@ -152,8 +152,8 @@ def run_carla_train(total_frames, model, device, optimizer, history, weather, ve
                     model.net.train()
                     optimizer.zero_grad()
                     pred_cls, pred_reg  = model.net(frames)
-                    loss_cls = classification_loss(pred_cls, label)
-                    loss_reg = regression_loss(pred_reg, steer)
+                    loss_cls = closs(pred_cls, label)
+                    loss_reg = rloss(pred_reg, steer)
                     loss_cls.backward(retain_graph=True)
                     loss_reg.backward()
                     reg_loss_dagger += loss_reg.item()
@@ -164,11 +164,11 @@ def run_carla_train(total_frames, model, device, optimizer, history, weather, ve
             
         return reg_loss_dagger, cls_loss_dagger
 
-def dagger(frames, model, device, optimizer, history, weather, vehicles, pedestians):
+def dagger(frames, model, device, optimizer, closs, rloss, history, weather, vehicles, pedestians):
     while True:
         try:
             reg_loss_dagger, cls_loss_dagger = run_carla_train(total_frames=frames, model=model, device=device, optimizer=optimizer, history=history,
-                                                        weather=weather, vehicles=vehicles, pedestians=pedestians)
+                                                        closs=closs, rloss=rloss, weather=weather, vehicles=vehicles, pedestians=pedestians)
             print('Done.')
             return reg_loss_dagger, cls_loss_dagger
         except TCPConnectionError as error:
