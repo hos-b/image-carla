@@ -1,131 +1,184 @@
-import sys
-import os
+"""evaluation script"""
+
 import argparse
-import matplotlib.pyplot as plt
+import logging
+import random
+import time
+import os
 import numpy as np
+import h5py
 import subprocess
 
+import torchvision.transforms as transforms
 import torch
-import torch.optim as optim
-from dataloader import get_data_loader
-from tensorboardX import SummaryWriter
+from utils import label_to_action_dobule
+
+from carla.client import make_carla_client, VehicleControl
+from carla.sensor import Camera, Lidar
+from carla.settings import CarlaSettings
+from carla.tcp import TCPConnectionError
+from carla.util import print_over_same_line
 from agent.cagent import CBCAgent
-from utils import print_over_same_line
-from evaluate import evaluate_model
 
-snapshot_dir = "./snaps"
-tensorboard_dir="./tensorboard"
-# train.py --weighted --snap -history=3 -bsize=8 -lr=5e-4 -name=july2_h3w -val_episodes=10 -val_frames=300
-# arg parse ----------------------------------------------------------------------------------------------------------------------------------------
-parser = argparse.ArgumentParser()
-parser.add_argument('--cont', '-c', action = "store_true", dest="continute_training", default = False, help ='continue training')
-parser.add_argument('--snap', '-s', action = "store_true", dest="save_snaps", default = True, help='save snapshots every 5 epochs')
-parser.add_argument('-name', type=str, dest="name", default="debug", help='name of the run')
-parser.add_argument('-lr', type=float, dest="learning_rate", default=5e-4, help='learning rate')
-parser.add_argument('-bsize', type=int, dest="batch_size", default=16, help='batch size')
-parser.add_argument('-epochs', type=int, dest="num_epochs", default=200, help='number of epochs')
-# specific args for this training ------------------------------------------------------------------------------------------------------------------
-parser.add_argument("--weighted", action = "store_true", dest="weighted", default = False, help ='apply weights to loss function')
-parser.add_argument('-val_episodes', type=int, dest="val_episodes", default=10, help='run x validation episodes')
-parser.add_argument('-val_frames', type=int, dest="val_frames", default=300, help='run for x frames')
-parser.add_argument('-history', type=int, dest="history", default=1, help='number of previous frames to stack')
-args = parser.parse_args()
-print("settings:")
-print("continute flag: {}\t save snaps :{}".format(args.continute_training,args.save_snaps))
-print("name :{}\t\t learning rate :{}".format(args.name,args.learning_rate))
-print("batch size :{}\t\t epochs :{}".format(args.batch_size,args.num_epochs))
-print("val eps :{}\t val frame :{}".format(args.val_episodes,args.val_frames))
-print("weighted :{}\t\t history :{}".format(args.weighted,args.history))
-# loaders ------------------------------------------------------------------------------------------------------------------------------------------
-train_loader = get_data_loader(batch_size=args.batch_size, train=True, history=args.history, validation_episodes=10)
-val_loader   = get_data_loader(batch_size=args.batch_size, train=False, history=args.history, validation_episodes=10)
+def distance_3d(pose1, pose2):
+    return np.sqrt((pose1.x-pose2.x)**2 + (pose1.y-pose2.y)**2 + (pose1.z-pose2.z)**2)
 
-# setting up training device, agent, optimizer, weights --------------------------------------------------------------------------------------------
-print("initializing agent, cuda, loss, optim")
-device = torch.device('cuda')
-agent = CBCAgent(device=device, history=args.history)
-class_weights = torch.Tensor([1, 1, 1, 1, 1, 1, 1, 1, 1])
-if args.weighted:
-    class_weights = torch.Tensor([ 0.16960808,  1.01462402,  1.        ,  0.336441  ,  1.85798203, 0.8735987 , 51.20952381, 0.01, 0.01]).to(device)
-loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights).to(device)
-optimizer = optim.Adam(agent.net.parameters(), lr=args.learning_rate)
+'''
+0 - Default
+1 - ClearNoon
+2 - CloudyNoon
+3 - WetNoon
+4 - WetCloudyNoon
+5 - MidRainyNoon
+6 - HardRainNoon
+7 - SoftRainNoon
+8 - ClearSunset
+9 - CloudySunset
+10 - WetSunset
+11 - WetCloudySunset
+12 - MidRainSunset
+13 - HardRainSunset
+14 - SoftRainSunset
+'''
+def run_carla_train(frames_per_episode, model, device, optimizer, history, save_images, vehicles, pedestians) :
+    with make_carla_client("localhost", 2000) as client:
+        print('carla client connected')
+        # setting up transform
+        transform_list = []
+        # transform_list.append(transforms.ColorJitter(hue=.05, saturation=.05))
+        transform_list.append(transforms.ToPILImage())
+        transform_list.append(transforms.ToTensor())
+        transform_list.append(transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
+        transform = transforms.Compose(transform_list)
 
-# if flag --cont is set, continute training from a previous snapshot ----------------------------------------------------------------------------------
-if(args.continute_training):
-    print("continue flag set")
-    try:
-        load_path = os.path.join(snapshot_dir,args.name)
-        agent.net.load_state_dict(torch.load(load_path+"_model"))
-        optimizer.load_state_dict(torch.load(load_path+"_optimizer"))
-    except FileNotFoundError:
-        print("snapshot file(s) not found")
+        # statistics to return
+        avg_collision_vehicle = []
+        avg_collision_pedestrian = []
+        avg_collision_other = []
+        avg_intersection_otherlane = []
+        avg_intersection_offroad = []
+        for episode in range(number_of_episodes):
+            # settings
+            settings = CarlaSettings()
+            settings.set(
+                SynchronousMode=True,
+                SendNonPlayerAgentsInfo=True,
+                NumberOfVehicles=vehicles,
+                NumberOfPedestrians=pedestians,
+                WeatherId=weather, 
+                QualityLevel='Low') # QualityLevel=args.quality_level
+            settings.randomize_seeds()
 
-# tensorboard --logdir=./tensorboard --port=6006
-# alias tb="tensorboard --logdir=./tensorboard --port=6006 --reload_interval 5 & sleep 3 ; firefox 127.0.0.1:6006 & fg 1"
-print("starting tensorboard")
-writer = SummaryWriter(os.path.join(tensorboard_dir,args.name))
-
-print("starting carla in server mode\n...")
-my_env = os.environ.copy()
-my_env["SDL_VIDEODRIVER"] = "offscreen"
-FNULL = open(os.devnull, 'w')
-subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '-ResX=16', 'ResY=9'], stdout=FNULL, stderr=FNULL, env=my_env)
-print("done")
-
-print("training ...")
-# lowest loss : save  best snapshots of the network
-lowest_loss = 20
-
-for epoch in range(1,args.num_epochs+1):    
-    print("epoch {}/{}".format(epoch,args.num_epochs))
-    loss_t = loss_v = 0
-    
-    # training episodes
-    for idx, (labels, frames) in enumerate(train_loader) :
-        print_over_same_line("training batch {}/{}".format(idx, len(train_loader)))
-        labels = labels.to(device)
-        frames = frames.to(device)
-        agent.net.train()
-        optimizer.zero_grad()
-        pred  = agent.net(frames,'')
-        loss = loss_fn(pred, labels.squeeze())
-        loss.backward()
-        loss_t += loss.item()
-        optimizer.step()
-        writer.add_scalar("iteration_training_loss", loss.item(), (epoch-1)*len(train_loader)+idx)
-
-    # validation episodes
-    for idx, (labels, frames) in enumerate(val_loader) :
-        print_over_same_line("validation batch {}/{}".format(idx, len(val_loader)))
-        labels = labels.to(device)
-        frames = frames.to(device)
-        agent.net.eval()
-        pred = agent.predict(frames)
-        loss = loss_fn(pred, labels.squeeze())
-        loss_v += loss.item()
-    
-    # running 10 validation episodes with the current model
-    acv, acp, aco, aiol, aior = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, 
-                                               history=args.history, save_images=False, weather=1, vehicles=20, pedestians=40)
-    writer.add_scalar("avg collision vehicle", sum(acv)/len(acv), epoch)
-    writer.add_scalar("avg collision pedestrian", sum(acp)/len(acp), epoch)
-    writer.add_scalar("avg collision other", sum(aco)/len(aco), epoch)
-    writer.add_scalar("avg intersection otherlane", sum(aiol)/len(aiol), epoch)
-    writer.add_scalar("avg intersection offroad", sum(aior)/len(aior), epoch)
-
-    # saving current val loss for shitty way of saving 'good' models
-    current_val_loss = loss_v/len(val_loader)
-    writer.add_scalar("epoch training loss", loss_t/len(train_loader), epoch)
-    writer.add_scalar("epoch validation loss", current_val_loss, epoch)
-
-    # saving model snapshots
-    if args.save_snaps :
-        save_path = os.path.join(snapshot_dir,args.name)
-        torch.save(optimizer.state_dict(), save_path+"_optimizer")
-        if  current_val_loss < lowest_loss or epoch%5==0 or current_val_loss <1:
-            if current_val_loss < lowest_loss:
-                lowest_loss = current_val_loss
-            torch.save(agent.net.state_dict(), save_path+"_model_{}".format(epoch))
-            print("saved snapshot at epoch {}".format(epoch))
+            camera = Camera('RGBFront', PostProcessing='SceneFinal')
+            camera.set_image_size(512, 512)
+            camera.set(FOV=90.0)
+            camera.set_position(1.65, 0, 1.30)
+            camera.set_rotation(pitch=0, yaw=0, roll=0)
+            settings.add_sensor(camera)
             
-writer.close()
+            
+            # choosing starting position, starting episode
+            scene = client.load_settings(settings)
+            number_of_player_starts = len(scene.player_start_spots)
+            player_start = random.randint(0, max(0, number_of_player_starts - 1))
+            print("starting new episode ({})...".format(episode))
+            client.start_episode(player_start)
+            
+            frames = torch.zeros(1, 3*history, 640, 480).float().to(device)
+
+            collision_vehicle = 0
+            collision_pedestrian = 0
+            collision_other = 0
+            intersection_otherlane = 0
+            intersection_offroad = 0
+            # execute frames
+            for frame_index in range(frames_per_episode):
+                measurements, sensor_data = client.read_data()
+                
+                # checking whether the episode should end (i.e. car carsh or fucked up stuff)
+                # measurements.player_measurements.collision_pedestrians doesn't matter. fuck pedestrians
+                if  measurements.player_measurements.collision_vehicles > 0
+                    or measurements.player_measurements.collision_other > 0
+                    or measurements.player_measurements.intersection_otherlane > 0.30
+                    or measurements.player_measurements.intersection_offroad > 0.30 :
+                    break
+                #print_measurements(measurements)
+                for name, measurement in sensor_data.items():
+                    # capture one episode
+                    if save_images:
+                        filename ="{}_e{:02d}_f{:03d}".format(name, episode, frame_index)
+                        measurement.save_to_disk(os.path.join("./data",filename))
+
+                
+                # getting expert controls
+                control = measurements.player_measurements.autopilot_control
+                expert = np.ndarray(shape=(3,), dtype = np.float32)
+                control.steer = control.steer if np.abs(control.steer)>5e-4 else 0
+                expert[0] = control.steer
+                expert[1] = control.throttle
+                expert[2] = control.brake
+
+                # convering current frame
+                frame = sensor_data['RGBFront'].data
+                frame = np.transpose(frame, (1, 0, 2))
+                frame = transform(frame).float().to(device)
+                
+                # if this is the first frame, fill the history buffer with the current frame
+                # otherwise shift
+                if frame_index ==0 :
+                    for i in range(history) :
+                        frames[0, i*3:(i+1)*3] = frame
+                else :
+                    frames[0, 3:] = frames[0, 0:-3]
+                    frames[0, :3] = frame
+                
+                # getting agent predictions
+                model.net.eval()
+                pred_cls, pred_reg  = model.predict(frames)
+                pred_cls = torch.argmax(pred_cls)
+                pred_cls = pred_cls.item()
+                pred_reg = pred_reg.item()
+                agent = label_to_action_dobule(pred_cls)
+
+                # sending back agent's controls
+                control = VehicleControl()
+                control.steer = pred_reg
+                control.throttle = agent[0] if measurements.player_measurements.forward_speed * 3.6 <=40 else 0
+                control.brake = agent[1]
+                control.hand_brake = False
+                control.reverse = False
+                client.send_control(control)
+            
+        return avg_collision_vehicle, avg_collision_pedestrian, avg_collision_other, avg_intersection_otherlane, avg_intersection_offroad
+
+
+def print_measurements(measurements):
+    number_of_agents = len(measurements.non_player_agents)
+    player_measurements = measurements.player_measurements
+    message = 'Vehicle at ({pos_x:.1f}, {pos_y:.1f}), '
+    message += '{speed:.0f} km/h, '
+    message += 'Collision: {{vehicles={col_cars:.0f}, pedestrians={col_ped:.0f}, other={col_other:.0f}}}, '
+    message += '{other_lane:.0f}% other lane, {offroad:.0f}% off-road, '
+    message += '({agents_num:d} non-player agents in the scene)'
+    message = message.format(
+        pos_x=player_measurements.transform.location.x,
+        pos_y=player_measurements.transform.location.y,
+        speed=player_measurements.forward_speed * 3.6, # m/s -> km/h
+        col_cars=player_measurements.collision_vehicles,
+        col_ped=player_measurements.collision_pedestrians,
+        col_other=player_measurements.collision_other,
+        other_lane=100 * player_measurements.intersection_otherlane,
+        offroad=100 * player_measurements.intersection_offroad,
+        agents_num=number_of_agents)
+    print_over_same_line(message)
+
+def dagger(frames, model, device, optimizer, history, weather, vehicles, pedestians):
+    while True:
+        try:
+            acv, acp, aco, aiol, aior = run_carla_train(frames_per_episode=frames, model=model, device=device, optimizer=optimizer, history=history,
+                                                        weather=weather, vehicles=vehicles, pedestians=pedestians)
+            print('Done.')
+            return acv, acp, aco, aiol, aior
+        except TCPConnectionError as error:
+            logging.error(error)
+            time.sleep(1)

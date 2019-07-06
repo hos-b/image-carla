@@ -44,13 +44,13 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
     with make_carla_client("localhost", 2000) as client:
         print('carla client connected')
         # setting up transform
-        transform_list = []
-        # transform_list.append(transforms.ColorJitter(hue=.05, saturation=.05))
         transform_list.append(transforms.ToPILImage())
+        # transform_list.append(transforms.Grayscale(num_output_channels=1))
+        transform_list.append(transforms.Resize(256))
         transform_list.append(transforms.ToTensor())
         transform_list.append(transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
         transform = transforms.Compose(transform_list)
-
+        
         # statistics to return
         avg_collision_vehicle = []
         avg_collision_pedestrian = []
@@ -70,10 +70,11 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
             settings.randomize_seeds()
 
             camera = Camera('RGBFront', PostProcessing='SceneFinal')
-            camera.set_image_size(640, 480)
-            camera.set(FOV=90.0)
-            camera.set_position(1.65, 0, 1.30)
-            camera.set_rotation(pitch=0, yaw=0, roll=0)
+            camera.set_image_size(512, 512)
+            camera.set(FOV=120.0)
+            # camera.set_position(1.65, 0, 1.30) < OLD
+            camera.set_position(2.0, 0, 1.60)
+            camera.set_rotation(roll=0, pitch=-10, yaw=0)
             settings.add_sensor(camera)
             
             
@@ -84,7 +85,7 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
             print("starting new episode ({})...".format(episode))
             client.start_episode(player_start)
             
-            frames = torch.zeros(1, 3*history, 640, 480).float().to(device)
+            frames = torch.zeros(1, 3*history, 512, 512).float().to(device)
 
             collision_vehicle = 0
             collision_pedestrian = 0
@@ -195,16 +196,16 @@ if __name__ == "__main__":
     my_env = os.environ.copy()
     my_env["SDL_VIDEODRIVER"] = "offscreen"
     FNULL = open(os.devnull, 'w')
-    subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '-ResX=16', 'ResY=9'],stdout=FNULL, stderr=FNULL, env=my_env)
+    subprocess.Popen(['.././CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '-ResX=16', 'ResY=9'],stdout=FNULL, stderr=FNULL, env=my_env)
     print("done")
 
     device = torch.device('cpu')
     agent = CBCAgent(device=device, history=3, name='efficient-double')
-    agent.net.load_state_dict(torch.load('snaps/doublenet_h3w_model_3'))
+    agent.net.load_state_dict(torch.load('snaps/doublenet_h3w_model_8'))
     acv, acp, aco, aiol, aior = evaluate_model(10,250,agent,device,3,True,1,20,20)
     for i in range(10):
         os.system("ffmpeg -r 20 -i data/RGBFront_e{:02d}_f%03d.png -b 500000  data/episode_{}.mp4".format(i,i))
-
+    os.system("rm -f *.png")
     print("avg collision vehicle {}".format(sum(acv)/len(acv)))
     print("avg collision pedestrain {}".format(sum(acp)/len(acp)))
     print("avg collision other {}".format(sum(aco)/len(aco)))

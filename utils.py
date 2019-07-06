@@ -104,3 +104,6 @@ def label_to_action_dobule(label) :
     else :
         action = [0.0, 0.0]
     return action
+
+def compare_controls(set1, set2) :
+    pass
