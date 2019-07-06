@@ -94,3 +94,13 @@ def action_to_label_double(action):
     # throttle = 0
     # brake = 1
     # no-op = 2
+
+def label_to_action_dobule(label) :
+    action = [0.0, 0.0]
+    if label == 0 :
+        action = [1.0, 0.0]
+    elif label==1 :
+        action = [0.0, 1.0]
+    else :
+        action = [0.0, 0.0]
+    return action

@@ -11,7 +11,7 @@ import subprocess
 
 import torchvision.transforms as transforms
 import torch
-from utils import label_to_action
+from utils import label_to_action_dobule
 
 from server.PythonClient.carla.client import make_carla_client, VehicleControl
 from server.PythonClient.carla.sensor import Camera, Lidar
@@ -128,16 +128,17 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
                 
                 # getting agent predictions
                 model.net.eval()
-                out = model.predict(frames)
-                out = torch.argmax(out)
-                out = out.item()
-                agent = label_to_action(out)
+                pred_cls, pred_reg  = agent.predict(frames)
+                pred_cls = torch.argmax(pred_cls)
+                pred_cls = pred_cls.item()
+                pred_reg = pred_reg.item()
+                agent = label_to_action_dobule(pred_cls)
 
                 # sending back agent's controls
                 control = VehicleControl()
-                control.steer = agent[0]/3.0
-                control.throttle = agent[1] if measurements.player_measurements.forward_speed * 3.6 <=40 else 0
-                control.brake = agent[2]
+                control.steer = pred_reg
+                control.throttle = agent[0] if measurements.player_measurements.forward_speed * 3.6 <=40 else 0
+                control.brake = agent[1]
                 control.hand_brake = False
                 control.reverse = False
                 client.send_control(control)
