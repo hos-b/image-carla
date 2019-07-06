@@ -92,7 +92,7 @@ for epoch in range(1,args.num_epochs+1):
         pred_cls, pred_reg  = agent.net(frames)
         loss_cls = classification_loss(pred_cls, labels.squeeze(1))
         loss_reg = regression_loss(pred_reg, steer)
-        loss_cls.backward()
+        loss_cls.backward(retain_graph=True)
         loss_reg.backward()
         reg_loss_t += loss_reg.item()
         cls_loss_t += loss_cls.item()
