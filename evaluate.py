@@ -86,7 +86,7 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
             print("starting new episode ({})...".format(episode))
             client.start_episode(player_start)
             
-            frames = torch.zeros(1, 3*history, 512, 512).float().to(device)
+            frames = torch.zeros(1, 3*history, 256, 256).float().to(device)
 
             collision_vehicle = 0
             collision_pedestrian = 0
@@ -205,7 +205,7 @@ if __name__ == "__main__":
     acv, acp, aco, aiol, aior = evaluate_model(10,250,agent,device,3,True,1,20,20)
     for i in range(10):
         os.system("ffmpeg -r 20 -i data/RGBFront_e{:02d}_f%03d.png -b 500000  data/episode_{}.mp4".format(i,i))
-    os.system("rm -f *.png")
+    os.system("rm -f data/*.png")
     print("avg collision vehicle {}".format(sum(acv)/len(acv)))
     print("avg collision pedestrain {}".format(sum(acp)/len(acp)))
     print("avg collision other {}".format(sum(aco)/len(aco)))
