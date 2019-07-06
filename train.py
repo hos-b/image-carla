@@ -47,7 +47,7 @@ class_weights = torch.Tensor([1, 1, 1])
 if args.weighted:
     class_weights = torch.Tensor([  1.        ,   0.99284543, 319.17272727]).to(device)
 classification_loss = torch.nn.CrossEntropyLoss(weight=class_weights).to(device)
-regression_loss = torch.nn.MSELoss(reduction='none')
+regression_loss = torch.nn.MSELoss(reduction='sum')
 optimizer = optim.Adam(agent.net.parameters(), lr=args.learning_rate)
 
 # if flag --cont is set, continute training from a previous snapshot ----------------------------------------------------------------------------------
