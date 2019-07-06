@@ -6,7 +6,7 @@ import os
 import torch
 import torch.utils.data
 import torchvision.transforms as transforms
-from utils import action_to_label
+from utils import action_to_label_double
 
 DATASET_DIR = "/tmp"
 PKG_NAME = "carla_dataset.hdf5"
@@ -61,8 +61,9 @@ class CarlaHDF5(torch.utils.data.Dataset):
             last_cumsum = self.cummulative_sizes[i]
         episode = self.data[episode_key]
         
-        label = action_to_label(episode[frame_index, "label"])
+        label, steer = action_to_label_double(episode[frame_index, "label"])
         label = torch.LongTensor([label])
+        steer = torch.LongTensor([steer])
         samples = torch.zeros(3*self.history, 256, 256).float()
 
         for i in range(self.history):
@@ -70,7 +71,7 @@ class CarlaHDF5(torch.utils.data.Dataset):
             np_frame = episode[history_index, "image"]
             samples[i*3:(i+1)*3] = self.transform(np_frame)
 
-        return label, samples
+        return steer, label, samples
         
     def __len__(self):
         return self.n_samples

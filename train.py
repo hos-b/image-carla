@@ -42,11 +42,12 @@ val_loader   = get_data_loader(batch_size=args.batch_size, train=False, history=
 # setting up training device, agent, optimizer, weights --------------------------------------------------------------------------------------------
 print("initializing agent, cuda, loss, optim")
 device = torch.device('cuda')
-agent = CBCAgent(device=device, history=args.history, name='efficientnet')
+agent = CBCAgent(device=device, history=args.history, name='efficient-double')
 class_weights = torch.Tensor([1, 1, 1, 1, 1, 1, 1, 1, 1])
 if args.weighted:
     class_weights = torch.Tensor([0.50829944,   1.20620843,   1.        ,   0.54104019,    1.065929  ,   0.96403628,  84.07272727, 0.001, 0.001]).to(device)
-loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights).to(device)
+classification_loss = torch.nn.CrossEntropyLoss(weight=class_weights).to(device)
+regression_loss = torch.nn.MSELoss(reduction=none)
 optimizer = optim.Adam(agent.net.parameters(), lr=args.learning_rate)
 
 # if flag --cont is set, continute training from a previous snapshot ----------------------------------------------------------------------------------
@@ -77,44 +78,55 @@ lowest_loss = 20
 
 for epoch in range(1,args.num_epochs+1):    
     print("epoch {}/{}".format(epoch,args.num_epochs))
-    loss_t = loss_v = 0
+    reg_loss_t = reg_loss_v = 0
+    cls_loss_t = cls_loss_v = 0
     
     # training episodes
-    for idx, (labels, frames) in enumerate(train_loader) :
+    for idx, (steer, labels, frames) in enumerate(train_loader) :
         print_over_same_line("training batch {}/{}".format(idx, len(train_loader)))
         labels = labels.to(device)
         frames = frames.to(device)
+        steer = steer.to(device)
         agent.net.train()
         optimizer.zero_grad()
-        pred  = agent.net(frames)
-        loss = loss_fn(pred, labels.squeeze(1))
-        loss.backward()
-        loss_t += loss.item()
+        pred_cls, pred_reg  = agent.net(frames)
+        loss_cls = classification_loss(pred_cls, labels.squeeze(1))
+        loss_reg = regression_loss(pred_reg, steer)
+        loss_cls.backward()
+        loss_reg.backward()
+        reg_loss_t += loss_reg.item()
+        cls_loss_t += loss_cls.item()
         optimizer.step()
-        writer.add_scalar("iteration_training_loss", loss.item(), (epoch-1)*len(train_loader)+idx)
+        writer.add_scalar("iteration/classification", loss_cls.item(), (epoch-1)*len(train_loader)+idx)
+        writer.add_scalar("iteration/regression", loss_reg.item(), (epoch-1)*len(train_loader)+idx)
 
     # validation episodes
-    for idx, (labels, frames) in enumerate(val_loader) :
+    for idx, (steer, labels, frames) in enumerate(val_loader) :
         print_over_same_line("validation batch {}/{}".format(idx, len(val_loader)))
         labels = labels.to(device)
         frames = frames.to(device)
+        steer = steer.to(device)
         agent.net.eval()
-        pred = agent.predict(frames)
-        loss = loss_fn(pred, labels.squeeze(1))
-        loss_v += loss.item()
+        pred_cls, pred_reg  = agent.predict(frames)
+        loss_cls = classification_loss(pred_cls, labels.squeeze(1))
+        loss_reg = regression_loss(pred_reg, steer)
+        reg_loss_v += loss_reg.item()
+        cls_loss_v += loss_cls.item()
     
     # running 10 validation episodes with the current model
     acv, acp, aco, aiol, aior = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, 
                                                history=args.history, save_images=False, weather=1, vehicles=20, pedestians=40)
-    writer.add_scalar("avg collision vehicle", sum(acv)/len(acv), epoch)
-    writer.add_scalar("avg collision pedestrian", sum(acp)/len(acp), epoch)
-    writer.add_scalar("avg collision other", sum(aco)/len(aco), epoch)
-    writer.add_scalar("avg intersection otherlane", sum(aiol)/len(aiol), epoch)
-    writer.add_scalar("avg intersection offroad", sum(aior)/len(aior), epoch)
+    writer.add_scalar("carla/vehicle_collision", sum(acv)/len(acv), epoch)
+    writer.add_scalar("carla/pedestrian_collision", sum(acp)/len(acp), epoch)
+    writer.add_scalar("carla/other_collision", sum(aco)/len(aco), epoch)
+    writer.add_scalar("carla/otherlane_intersection", sum(aiol)/len(aiol), epoch)
+    writer.add_scalar("carla/offroad_intersection", sum(aior)/len(aior), epoch)
     # saving current val loss for a shitty way of saving 'good' models
-    current_val_loss = loss_v/len(val_loader)
-    writer.add_scalar("epoch training loss", loss_t/len(train_loader), epoch)
-    writer.add_scalar("epoch validation loss", current_val_loss, epoch)
+    current_val_loss = (reg_loss_v + cls_loss_v)/len(val_loader)
+    writer.add_scalar("training/regression", reg_loss_t/len(train_loader), epoch)
+    writer.add_scalar("training/classification", cls_loss_t/len(train_loader), epoch)
+    writer.add_scalar("validation/regression", reg_loss_v, epoch)
+    writer.add_scalar("validation/classification", cls_loss_v, epoch)
 
     # saving model snapshots
     if args.save_snaps :
