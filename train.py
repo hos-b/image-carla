@@ -94,6 +94,8 @@ for epoch in range(1,args.num_epochs+1):
         agent.net.train()
         optimizer.zero_grad()
         pred_cls, pred_reg  = agent.net(frames)
+        print (labels.squeeze(1).shape)
+        print (steer.shape)
         loss_cls = classification_loss(pred_cls, labels.squeeze(1))
         loss_reg = regression_loss(pred_reg, steer)
         loss_cls.backward(retain_graph=True)
