@@ -198,10 +198,10 @@ if __name__ == "__main__":
     subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '-ResX=16', 'ResY=9'],stdout=FNULL, stderr=FNULL, env=my_env)
     print("done")
 
-    device = torch.device('cuda')
-    agent = CBCAgent(device=device, history=1, name='resnet18')
-    agent.net.load_state_dict(torch.load('snaps/july2_h1w_model_21'))
-    acv, acp, aco, aiol, aior = evaluate_model(10,250,agent,device,1,True,1,20,20)
+    device = torch.device('cpu')
+    agent = CBCAgent(device=device, history=3, name='efficient-double')
+    agent.net.load_state_dict(torch.load('snaps/doublenet_h3w_model_3'))
+    acv, acp, aco, aiol, aior = evaluate_model(10,250,agent,device,3,True,1,20,20)
     for i in range(10):
         os.system("ffmpeg -r 20 -i data/RGBFront_e{:02d}_f%03d.png -b 500000  data/episode_{}.mp4".format(i,i))
 
