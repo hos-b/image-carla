@@ -74,3 +74,24 @@ def print_over_same_line(text):
     empty_space = max(0, terminal_width - len(text))
     sys.stdout.write('\r' + text + empty_space * ' ')
     sys.stdout.flush()
+
+
+# functions for the double network
+def action_to_label_double(action) :
+    # bizarre cases
+    if action[3] != 0 or action[4]!= 0 :
+        print ("bizarre expert action! handbrake {}, reverse {}".format(action[3], action[4]))
+    # normal cases
+    steer = action[0] if action[0] > 0 else 0
+    throttle = action[1]>0
+    brake = action[2]>0
+
+    if throttle :
+        return 0, steer
+    elif brake :
+        return 1, steer
+    else :
+        return 2, steer
+    # throttle = 0
+    # brake = 1
+    # no-op = 2
