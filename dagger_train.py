@@ -169,10 +169,10 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
 def dagger(frames, model, device, optimizer, closs, rloss, history, weather, vehicles, pedestians):
     while True:
         try:
-            reg_loss_dagger, cls_loss_dagger = run_carla_train(total_frames=frames, model=model, device=device, optimizer=optimizer, history=history,
+            reg_loss_dagger, cls_loss_dagger, episode_count = run_carla_train(total_frames=frames, model=model, device=device, optimizer=optimizer, history=history,
                                                         closs=closs, rloss=rloss, weather=weather, vehicles=vehicles, pedestians=pedestians)
             print('Done.')
-            return reg_loss_dagger, cls_loss_dagger
+            return reg_loss_dagger, cls_loss_dagger, episode_count
         except TCPConnectionError as error:
             logging.error(error)
             time.sleep(1)
