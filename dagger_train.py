@@ -106,7 +106,7 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
                 # getting expert controls
                 control = measurements.player_measurements.autopilot_control
                 expert = np.ndarray(shape=(3,), dtype = np.float32)
-                control.steer = control.steer if np.abs(control.steer)>1e-3 else 0
+                control.steer = control.steer if np.abs(control.steer)>5e-4 else 0
                 expert[0] = control.steer
                 expert[1] = control.throttle
                 expert[2] = control.brake
@@ -163,7 +163,6 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
                     trained_frames +=1
                     if trained_frames>= total_frames:
                         break
-
             
         return reg_loss_dagger, cls_loss_dagger, episode_count
 
