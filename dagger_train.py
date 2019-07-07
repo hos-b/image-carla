@@ -97,8 +97,8 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
                 # print("{} type {}".format(measurements.player_measurements.collision_vehicles,type(measurements.player_measurements.collision_vehicles)))
                 if  measurements.player_measurements.collision_vehicles > 0 \
                     or measurements.player_measurements.collision_other > 0 \
-                    or measurements.player_measurements.intersection_otherlane > 0.15 \
-                    or measurements.player_measurements.intersection_offroad > 0.15 \
+                    or measurements.player_measurements.intersection_otherlane > 0.2 \
+                    or measurements.player_measurements.intersection_offroad > 0.2 \
                     or measurements.player_measurements.autopilot_control.hand_brake \
                     or measurements.player_measurements.autopilot_control.reverse :
                     break
@@ -136,14 +136,16 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
                 # sending back agent's controls
                 control = VehicleControl()
                 control.steer = agent[0]
-                control.throttle = agent[1] if measurements.player_measurements.forward_speed * 3.6 <=40 else 0
+                control.throttle = agent[1] if measurements.player_measurements.forward_speed * 3.6 <=30 else 0
                 control.brake = agent[2]
                 control.hand_brake = False
                 control.reverse = False
                 client.send_control(control)
 
                 # comparing controls (should we train this ?)
-                if compare_controls(expert=expert, agent=agent) :
+                # only train on frames after 50, before that it's bullshit
+                # if compare_controls(expert=expert, agent=agent) and frame_index>50 :
+                if frame_index > 50:
                     print_over_same_line("dagger frame {}/{} in {} episodes".format(trained_frames,total_frames,episode_count))
                     label = 0 if expert[1] > 0 else \
                             1 if expert[2] > 0 else 2

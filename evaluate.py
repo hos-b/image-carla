@@ -104,15 +104,6 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
                         filename ="{}_e{:02d}_f{:03d}".format(name, episode, frame_index)
                         measurement.save_to_disk(os.path.join("./data",filename))
 
-                # SDL_VIDEODRIVER = offscreen
-                # getting expert controls
-                control = measurements.player_measurements.autopilot_control
-                expert = np.ndarray(shape=(3,), dtype = np.float32)
-                control.steer = control.steer if np.abs(control.steer)>1e-3 else 0
-                expert[0] = control.steer
-                expert[1] = control.throttle
-                expert[2] = control.brake
-
                 # convering current frame
                 frame = sensor_data['RGBFront'].data
                 frame = np.transpose(frame, (1, 0, 2))
@@ -138,7 +129,7 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
                 # sending back agent's controls
                 control = VehicleControl()
                 control.steer = pred_reg
-                control.throttle = agent[1] if measurements.player_measurements.forward_speed * 3.6 <=40 else 0
+                control.throttle = agent[1] if measurements.player_measurements.forward_speed * 3.6 <=30 else 0
                 control.brake = agent[2]
                 control.hand_brake = False
                 control.reverse = False
@@ -202,10 +193,11 @@ if __name__ == "__main__":
     device = torch.device('cpu')
     agent = CBCAgent(device=device, history=3, name='efficient-double')
     agent.net.load_state_dict(torch.load('snaps/doublenet_h3w_model_8'))
-    acv, acp, aco, aiol, aior = evaluate_model(10,250,agent,device,3,True,1,20,20)
+    acv, acp, aco, aiol, aior = evaluate_model(10,400,agent,device,3,True,1,30,30)
     for i in range(10):
         os.system("ffmpeg -r 20 -i data/RGBFront_e{:02d}_f%03d.png -b 500000  data/episode_{}.mp4".format(i,i))
     os.system("rm -f data/*.png")
+    os.system("nautilus ./data")
     print("avg collision vehicle {}".format(sum(acv)/len(acv)))
     print("avg collision pedestrain {}".format(sum(acp)/len(acp)))
     print("avg collision other {}".format(sum(aco)/len(aco)))
