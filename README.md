@@ -30,7 +30,7 @@ The second fully connected layer is used to regress the steering angle. A tanh a
 ## Algorithms
 
 ### Data Collection
-Controls from Carla's autopilot is used as the label for each frame. The current dataset is produced from Town02. A total of 110 episodes, each containing ~700 frames have been recorded and stored inside and hdf5 file using `data_collector.py`.
+Controls from Carla's autopilot is used as the label for each frame. The current dataset is produced from Town02. A total of 110 episodes, each containing ~700 frames have been recorded and stored inside an hdf5 file using `data_collector.py`.
 
 ### DataLoader
 A custom Dataset class is used to handle the chunks from the hdf5 file. This also makes handling frame history much easier (`dataloader.py`).

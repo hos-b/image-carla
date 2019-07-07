@@ -105,10 +105,11 @@ for epoch in range(1,args.num_epochs+1):
         writer.add_scalar("iteration/regression", loss_reg.item(), (epoch-1)*len(train_loader)+idx)
 
     if args.dagger:
-        reg_loss_dagger, cls_loss_dagger = dagger(frames=args.dagger_frames, model=agent, device=device, optimizer=optimizer, closs=classification_loss,
+        reg_loss_dagger, cls_loss_dagger, dg_episodes = dagger(frames=args.dagger_frames, model=agent, device=device, optimizer=optimizer, closs=classification_loss,
                                                   rloss=regression_loss, history=args.history, weather=1, vehicles=30, pedestians=30)
         writer.add_scalar("training/dagger_regression", reg_loss_dagger/args.dagger_frames, epoch)
         writer.add_scalar("training/dagger_classification", cls_loss_dagger/args.dagger_frames, epoch)
+        writer.add_scalar("carla/dagger_episode_count", dg_episodes, epoch)
 
     # validation episodes
     for idx, (steer, labels, frames) in enumerate(val_loader) :

@@ -56,7 +56,9 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
         cls_loss_dagger = 0
         # frames trained
         trained_frames = 0
+        episode_count = 0
         for episode in range(10000):
+            episode_count +=1
             # dagger end
             if trained_frames >= total_frames:
                 break
@@ -142,7 +144,7 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
 
                 # comparing controls (should we train this ?)
                 if compare_controls(expert=expert, agent=agent) :
-                    print_over_same_line("dagger frame {}/{}".format(trained_frames,total_frames))
+                    print_over_same_line("dagger frame {}/{} in {} episodes".format(trained_frames,total_frames,episode_count))
                     label = 0 if expert[1] > 0 else \
                             1 if expert[2] > 0 else 2
                     label = torch.LongTensor([label]).to(device)
@@ -163,7 +165,7 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
                         break
 
             
-        return reg_loss_dagger, cls_loss_dagger
+        return reg_loss_dagger, cls_loss_dagger, episode_count
 
 def dagger(frames, model, device, optimizer, closs, rloss, history, weather, vehicles, pedestians):
     while True:
