@@ -109,7 +109,7 @@ def compare_controls(expert, agent) :
     # steering in opposite directions
     if agent[0]*expert[0] < 0:
         return True
-    # wrong rotation or wrong idle mode
+    # wrong steering
     if (expert[0]==0 and agent[0]!=0) or (expert[0]!=0 and agent[0]==0):
         return True
     # wrong throttle
