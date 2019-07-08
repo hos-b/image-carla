@@ -13,11 +13,11 @@ import torchvision.transforms as transforms
 import torch
 from utils import label_to_action_dobule
 
-from server.PythonClient.carla.client import make_carla_client, VehicleControl
-from server.PythonClient.carla.sensor import Camera, Lidar
-from server.PythonClient.carla.settings import CarlaSettings
-from server.PythonClient.carla.tcp import TCPConnectionError
-from server.PythonClient.carla.util import print_over_same_line
+from carla.client import make_carla_client, VehicleControl
+from carla.sensor import Camera, Lidar
+from carla.settings import CarlaSettings
+from carla.tcp import TCPConnectionError
+from carla.util import print_over_same_line
 from agent.cagent import CBCAgent
 
 def distance_3d(pose1, pose2):
@@ -83,7 +83,7 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
             scene = client.load_settings(settings)
             number_of_player_starts = len(scene.player_start_spots)
             player_start = random.randint(0, max(0, number_of_player_starts - 1))
-            print("starting new episode ({})...".format(episode))
+            print_over_same_line("running eval episode {}/{}".format(episode+1,number_of_episodes))
             client.start_episode(player_start)
             
             frames = torch.zeros(1, 3*history, 256, 256).float().to(device)
@@ -192,10 +192,12 @@ if __name__ == "__main__":
 
     device = torch.device('cpu')
     agent = CBCAgent(device=device, history=3, name='efficient-double')
-    agent.net.load_state_dict(torch.load('snaps/doublenet_h3w_model_8'))
+    model_name = "doublenet_h3w_newerdag_b0_model_10"
+    agent.net.load_state_dict(torch.load("snaps/{}".format(model_name)))
     acv, acp, aco, aiol, aior = evaluate_model(10,400,agent,device,3,True,1,30,30)
+    os.system("mkdir data/{}".format(model_name))
     for i in range(10):
-        os.system("ffmpeg -r 20 -i data/RGBFront_e{:02d}_f%03d.png -b 500000  data/episode_{}.mp4".format(i,i))
+        os.system("ffmpeg -r 20 -i data/RGBFront_e{:02d}_f%03d.png -b 500000  data/{}/episode_{}.mp4".format(i,model_name,i))
     os.system("rm -f data/*.png")
     os.system("nautilus ./data")
     print("avg collision vehicle {}".format(sum(acv)/len(acv)))

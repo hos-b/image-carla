@@ -77,6 +77,10 @@ def print_over_same_line(text):
 
 # function for the double network
 def action_to_label_double(action):
+    """
+    converts action arrays [steering, throttle, brake] to
+    labels. 0 : throttle, 1 : brake, 2: no-op
+    """
     # bizarre cases
     if action[3] != 0 or action[4]!= 0 :
         print ("bizarre expert action! handbrake {}, reverse {}".format(action[3], action[4]))
@@ -95,17 +99,25 @@ def action_to_label_double(action):
     # brake = 1
     # no-op = 2
 
-def label_to_action_dobule(label) :
-    action = [0.0, 0.0, 0.0]
+def label_to_action_dobule(cls, reg) :
+    """
+    converting doublenet's output to actions
+    output : [steering, throttle, brake]
+    """
+    action = [reg, 0.0, 0.0]
     if label == 0 :
-        action = [0.0, 1.0, 0.0]
+        action = [reg, 1.0, 0.0]
     elif label==1 :
-        action = [0.0, 0.0, 1.0]
+        action = [reg, 0.0, 1.0]
     else :
-        action = [0.0, 0.0, 0.0]
+        action = [reg, 0.0, 0.0]
     return action
 
 def compare_controls(expert, agent, threshold) :
+    """
+    compare the expert controls with an agent
+    returns True if they vary enough
+    """
     # steering in opposite directions
     if agent[0]*expert[0] < 0:
         return True

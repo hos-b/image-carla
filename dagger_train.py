@@ -41,9 +41,12 @@ def distance_3d(pose1, pose2):
 13 - HardRainSunset
 14 - SoftRainSunset
 '''
-def run_carla_train(total_frames, model, device, optimizer, closs, rloss, history, weather, vehicles, pedestians) :
+def run_carla_train(total_frames, model, device, history, weather, vehicles, pedestians, DG_next_location, DG_next_episode,DG_threshold) :
     with make_carla_client("localhost", 2000) as client:
         print('carla client connected')
+        # setting up HDF5 file
+        imitation_type = np.dtype([('image', np.uint8, (512, 512, 3)), ('label', np.float32, 5)])
+        hdf5_file = h5py.File(os.path.join("/tmp","dagger_dataset.hdf5"), "a")
         # setting up transform
         transform_list = []
         transform_list.append(transforms.ToPILImage())
@@ -55,12 +58,18 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
         reg_loss_dagger = 0
         cls_loss_dagger = 0
         # frames trained
-        trained_frames = 0
-        episode_count = 0
+        saved_frames = 0
+        # keeping track of episodes
+        dagger_episode_count = 0
+        dagger_episode = DG_next_episode
+        # network input
+        network_frames = torch.zeros(1, 3*history, 256, 256).float().to(device)
+        # record flag, when set the history buffer is filled with the first frame
+        # after it is set, all frames should be set
+        record = False
         for episode in range(10000):
-            episode_count +=1
             # dagger end
-            if trained_frames >= total_frames:
+            if saved_frames >= total_frames:
                 break
             # settings to send to carla
             settings = CarlaSettings()
@@ -80,21 +89,19 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
             camera.set_rotation(roll=0, pitch=-10, yaw=0)
             settings.add_sensor(camera)
             
-            
             # choosing starting position, starting episode
             scene = client.load_settings(settings)
             # number_of_player_starts = len(scene.player_start_spots)
-            player_start = 42
+            player_start = DG_next_location
             client.start_episode(player_start)
-            
-            frames = torch.zeros(1, 3*history, 256, 256).float().to(device)
-            # execute frames
+            # dataset 
+            dataset = hdf5_file.create_dataset("dagger_{:06d}".format(dagger_episode),shape =(1,), maxshape=(None,), chunks=(1,), compression="lzf", dtype=imitation_type)
+            # keeping track of frames in this episode
+            dagger_index = 0
             for frame_index in range(1000):
                 measurements, sensor_data = client.read_data()
-                
                 # checking whether the episode should end (i.e. car crash or fucked up stuff)
                 # measurements.player_measurements.collision_pedestrians doesn't matter. fuck pedestrians
-                # print("{} type {}".format(measurements.player_measurements.collision_vehicles,type(measurements.player_measurements.collision_vehicles)))
                 if  measurements.player_measurements.collision_vehicles > 0 \
                     or measurements.player_measurements.collision_other > 0 \
                     or measurements.player_measurements.intersection_otherlane > 0.2 \
@@ -105,74 +112,72 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
 
                 # getting expert controls
                 control = measurements.player_measurements.autopilot_control
-                expert = np.ndarray(shape=(3,), dtype = np.float32)
+                expert = np.ndarray(shape=(5,), dtype = float)
                 control.steer = control.steer if np.abs(control.steer)>5e-4 else 0
                 expert[0] = control.steer
                 expert[1] = control.throttle
                 expert[2] = control.brake
-                # convering current frame
-                frame = sensor_data['RGBFront'].data
-                frame = np.transpose(frame, (1, 0, 2))
-                frame = transform(frame).float().to(device)
-                
-                # if this is the first frame, fill the history buffer with the current frame
-                # otherwise shift
-                if frame_index ==0 :
+                expert[3] = 1 if control.hand_brake else 0
+                expert[4] = 1 if control.reverse else 0
+
+                # capturing and convering current frame
+                dagger_frame = sensor_data['RGBFront'].data
+                network_frame = np.transpose(dagger_frame, (1, 0, 2))
+                network_frame = transform(network_frame).float().to(device)
+                # if this is the first frame, fill the history buffer with the current frame; otherwise shift
+                if frame_index==0 :
                     for i in range(history) :
-                        frames[0, i*3:(i+1)*3] = frame
+                        network_frames[0, i*3:(i+1)*3] = network_frame
                 else :
-                    frames[0, 3:] = frames[0, 0:-3]
-                    frames[0, :3] = frame
-                
+                    network_frames[0, 3:] = network_frames[0, 0:-3]
+                    network_frames[0, :3] = network_frame
+
                 # getting agent predictions
                 model.net.eval()
-                pred_cls, pred_reg  = model.predict(frames)
+                pred_cls, pred_reg  = model.predict(network_frames)
                 pred_cls = torch.argmax(pred_cls)
                 pred_cls = pred_cls.item()
                 pred_reg = pred_reg.item()
-                agent = label_to_action_dobule(pred_cls)
-                agent[0] = pred_reg
-
+                agent = label_to_action_dobule(pred_cls, pred_reg)
                 # sending back agent's controls
                 control = VehicleControl()
                 control.steer = agent[0]
+                # 30km/h speed limit
                 control.throttle = agent[1] if measurements.player_measurements.forward_speed * 3.6 <=30 else 0
                 control.brake = agent[2]
                 control.hand_brake = False
                 control.reverse = False
                 client.send_control(control)
 
-                # comparing controls (should we train this ?)
-                # only train on frames after 50, before that it's bullshit
-                # if compare_controls(expert=expert, agent=agent) and frame_index>50 :
-                if compare_controls(expert=expert, agent=agent, threshold=0.2) and frame_index > 50:
-                    print_over_same_line("dagger frame {}/{} in {} episodes".format(trained_frames,total_frames,episode_count))
-                    label = 0 if expert[1] > 0 else \
-                            1 if expert[2] > 0 else 2
-                    label = torch.LongTensor([label]).to(device)
-                    steer = torch.Tensor([expert[0]]).unsqueeze(0).to(device)
-
-                    model.net.train()
-                    optimizer.zero_grad()
-                    pred_cls, pred_reg  = model.net(frames)
-                    loss_cls = closs(pred_cls, label)
-                    loss_reg = rloss(pred_reg, steer)
-                    loss_cls.backward(retain_graph=True)
-                    loss_reg.backward()
-                    reg_loss_dagger += loss_reg.item()
-                    cls_loss_dagger += loss_cls.item()
-                    optimizer.step()
-                    trained_frames +=1
-                    if trained_frames>= total_frames:
+                # comparing controls (should we save this ?)
+                # only save frames after 50, before that it's bullshit
+                if not record : 
+                    if compare_controls(expert=expert[0:3], agent=agent, threshold=DG_threshold) and frame_index > 50:
+                        record = True
+                if record :
+                    print_over_same_line("dagger frame {}/{} in {} episodes".format(trained_frames,total_frames,dagger_episode_count))
+                    data = np.array([(dagger_frame, expert)], dtype=imitation_type)
+                    dataset.resize(dagger_index+2, axis=0)
+                    dataset[dagger_index] = data
+                    saved_frames +=1
+                    dagger_index += 1
+                    if saved_frames>= total_frames:
                         break
-            
-        return reg_loss_dagger, cls_loss_dagger, episode_count
+            # if something's been saved this episode, start a new dataset
+            # could lead to errors for calling the function twice
+            if dagger_index > 0 :
+                dagger_episode_count +=1
 
-def dagger(frames, model, device, optimizer, closs, rloss, history, weather, vehicles, pedestians):
+        hdf5_file.close()
+        return dagger_episode_count
+
+def dagger(frames, model, device, history, weather, vehicles, pedestians, DG_next_location, DG_next_episode, DG_threshold):
     while True:
         try:
-            reg_loss_dagger, cls_loss_dagger, episode_count = run_carla_train(total_frames=frames, model=model, device=device, optimizer=optimizer, history=history,
-                                                        closs=closs, rloss=rloss, weather=weather, vehicles=vehicles, pedestians=pedestians)
+            reg_loss_dagger, cls_loss_dagger, episode_count = run_carla_train(total_frames=frames, model=model, device=device, history=history, 
+                                                                              weather=weather, vehicles=vehicles, pedestians=pedestians, 
+                                                                              G_next_episode=DG_next_episode, DG_threshold=DG_threshold,
+                                                                              DG_next_location=DG_next_location,)
             print('Done.')
             return reg_loss_dagger, cls_loss_dagger, episode_count
         except TCPConnectionError as error:

@@ -10,6 +10,7 @@ from utils import action_to_label_double
 
 DATASET_DIR = "/tmp"
 PKG_NAME = "carla_dataset.hdf5"
+DGR_NAME = "dagger_dataset.hdf5"
 
 class CarlaHDF5(torch.utils.data.Dataset):
     def __init__(self, **kwargs):
@@ -18,9 +19,9 @@ class CarlaHDF5(torch.utils.data.Dataset):
         self.history = kwargs.get("history", 1)
         self.validation_episodes = kwargs.get("validation_episodes", 5)
         self.transform  = kwargs.get("transform")
-
+        self.hdf5_name = kwargs.get("hdf5_name")
         print("opening {}".format(PKG_NAME))
-        self.data = h5py.File(os.path.join(DATASET_DIR, PKG_NAME), "r")        
+        self.data = h5py.File(os.path.join(DATASET_DIR, self.hdf5_name), "r")        
         self.keys = list(self.data.keys())
         self.ds_count = len(self.keys)
         
@@ -48,7 +49,7 @@ class CarlaHDF5(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         if self.data is None :
-            self.data = h5py.File(os.path.join(DATASET_DIR, PKG_NAME), "r", libver="latest")
+            self.data = h5py.File(os.path.join(DATASET_DIR, self.hdf5_name), "r", libver="latest")
         
         episode_key = ''
         frame_index = 0
@@ -77,7 +78,7 @@ class CarlaHDF5(torch.utils.data.Dataset):
         return self.n_samples
 
 
-def get_data_loader(batch_size=1, train=False, history=1, validation_episodes=5):
+def get_data_loader(batch_size=1, train=False, history=1, validation_episodes=5, dagger=False):
 
     transform_list = []
     transform_list.append(transforms.ToPILImage())
@@ -89,7 +90,10 @@ def get_data_loader(batch_size=1, train=False, history=1, validation_episodes=5)
     transform_list.append(transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
     transform = transforms.Compose(transform_list)
 
-    reader = CarlaHDF5(train=train, history=history, transform=transform, validation_episodes=validation_episodes)
+    if not dagger:
+        reader = CarlaHDF5(train=train, history=history, transform=transform, validation_episodes=validation_episodes, hdf5_name=PKG_NAME)
+    else :
+        reader = CarlaHDF5(train=True, history=history, transform=transform, validation_episodes=0, hdf5_name=DGR_NAME)
     
     data_loader = torch.utils.data.DataLoader(reader,
                                               batch_size=batch_size,

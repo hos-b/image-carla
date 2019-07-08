@@ -13,6 +13,12 @@ from utils import print_over_same_line
 from evaluate import evaluate_model
 from dagger_train import dagger
 
+STATUS_TRAINING = 0
+STATUS_RECORDING_DAGGER = 1
+STATUS_TRAINING_DAGGER = 2
+STATUS_VALIDATING = 3
+STATUS_SIMULATING = 4
+
 snapshot_dir = "./snaps"
 tensorboard_dir="./tensorboard"
 # train.py --weighted --snap -history=3 -bsize=8 -lr=5e-4 -name=july2_h3w -val_episodes=10 -val_frames=300
@@ -42,7 +48,6 @@ print("dagger : {} \t\t dagger frames : {}".format(args.dagger,args.dagger_frame
 # loaders ------------------------------------------------------------------------------------------------------------------------------------------
 train_loader = get_data_loader(batch_size=args.batch_size, train=True, history=args.history, validation_episodes=10)
 val_loader   = get_data_loader(batch_size=args.batch_size, train=False, history=args.history, validation_episodes=10)
-
 # setting up training device, agent, optimizer, weights --------------------------------------------------------------------------------------------
 print("initializing agent, cuda, loss, optim")
 device = torch.device('cuda')
@@ -53,8 +58,7 @@ if args.weighted:
 classification_loss = torch.nn.CrossEntropyLoss(weight=class_weights).to(device)
 regression_loss = torch.nn.MSELoss(reduction='sum')
 optimizer = optim.Adam(agent.net.parameters(), lr=args.learning_rate)
-
-# if flag --cont is set, continute training from a previous snapshot ----------------------------------------------------------------------------------
+# if flag --cont is set, continute training from a previous snapshot -------------------------------------------------------------------------------
 if(args.continute_training):
     print("continue flag set")
     try:
@@ -63,12 +67,9 @@ if(args.continute_training):
         optimizer.load_state_dict(torch.load(load_path+"_optimizer"))
     except FileNotFoundError:
         print("snapshot file(s) not found")
-
-# tensorboard --logdir=./tensorboard --port=6006
-# alias tb="tensorboard --logdir=./tensorboard --port=6006 --reload_interval 5 & sleep 3 ; firefox 127.0.0.1:6006 & fg 1"
+# starting tensorboard and carla in server mode -------------------- -------------------------------------------------------------------------------
 print("starting tensorboard")
 writer = SummaryWriter(os.path.join(tensorboard_dir,args.name))
-
 print("starting carla in server mode\n...")
 my_env = os.environ.copy()
 my_env["SDL_VIDEODRIVER"] = "offscreen"
@@ -79,13 +80,14 @@ print("done")
 print("training ...")
 # lowest loss : save  best snapshots of the network
 lowest_loss = 20
-
+# dagger episodes ran so far
+dagger_episode_index = 0
 for epoch in range(1,args.num_epochs+1):    
     print("epoch {}/{}".format(epoch,args.num_epochs))
-    reg_loss_t = reg_loss_v = 0
-    cls_loss_t = cls_loss_v = 0
-    
-    # training episodes
+    reg_loss_t = reg_loss_v = reg_loss_d = 0
+    cls_loss_t = cls_loss_v = cls_loss_d = 0
+    writer.add_scalar("status", STATUS_TRAINING, epoch+STATUS_TRAINING)
+    # training episodes ----------------------------------------------------------------------------------------------------------------------------
     for idx, (steer, labels, frames) in enumerate(train_loader) :
         print_over_same_line("training batch {}/{}".format(idx, len(train_loader)))
         labels = labels.to(device)
@@ -101,17 +103,42 @@ for epoch in range(1,args.num_epochs+1):
         reg_loss_t += loss_reg.item()
         cls_loss_t += loss_cls.item()
         optimizer.step()
-        writer.add_scalar("iteration/classification", loss_cls.item(), (epoch-1)*len(train_loader)+idx)
-        writer.add_scalar("iteration/regression", loss_reg.item(), (epoch-1)*len(train_loader)+idx)
-
+        writer.add_scalar("iteration/trn_classification", loss_cls.item(), (epoch-1)*len(train_loader)+idx)
+        writer.add_scalar("iteration/trn_regression", loss_reg.item(), (epoch-1)*len(train_loader)+idx)
+    writer.add_scalar("training/regression", reg_loss_t/len(train_loader), epoch)
+    writer.add_scalar("training/classification", cls_loss_t/len(train_loader), epoch)
+    # dagger episodes ------------------------------------------------------------------------------------------------------------------------------
     if args.dagger:
-        reg_loss_dagger, cls_loss_dagger, dg_episodes = dagger(frames=args.dagger_frames, model=agent, device=device, optimizer=optimizer, closs=classification_loss,
-                                                  rloss=regression_loss, history=args.history, weather=1, vehicles=30, pedestians=30)
-        writer.add_scalar("training/dagger_regression", reg_loss_dagger/args.dagger_frames, epoch)
-        writer.add_scalar("training/dagger_classification", cls_loss_dagger/args.dagger_frames, epoch)
-        writer.add_scalar("carla/dagger_episode_count", dg_episodes, epoch)
+        writer.add_scalar("status", STATUS_RECORDING_DAGGER, epoch+STATUS_RECORDING_DAGGER)
+        dg_episodes = dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, vehicles=30, pedestians=30, 
+                            DG_next_location=42, DG_next_episode=dagger_episode_index, DG_threshold=0.15)
+        dagger_episode_index += dg_episodes
+        # dagger loader
+        writer.add_scalar("status", STATUS_TRAINING_DAGGER, epoch+STATUS_TRAINING_DAGGER)
+        daggr_loader = get_data_loader(batch_size=args.batch_size, train=False, history=args.history, dagger=True)
+        for idx, (steer, labels, frames) in enumerate(daggr_loader) :
+            print_over_same_line("dagger batch {}/{}".format(idx, len(daggr_loader)))
+            labels = labels.to(device)
+            frames = frames.to(device)
+            steer = steer.to(device)
+            agent.net.train()
+            optimizer.zero_grad()
+            pred_cls, pred_reg  = agent.net(frames)
+            loss_cls = classification_loss(pred_cls, labels.squeeze(1))
+            loss_reg = regression_loss(pred_reg, steer)
+            loss_cls.backward(retain_graph=True)
+            loss_reg.backward()
+            reg_loss_d += loss_reg.item()
+            cls_loss_d += loss_cls.item()
+            optimizer.step()
+            writer.add_scalar("iteration/dgr_classification", loss_cls.item(), (epoch-1)*len(daggr_loader)+idx)
+            writer.add_scalar("iteration/dgr_regression", loss_reg.item(), (epoch-1)*len(daggr_loader)+idx)
+        writer.add_scalar("dagger/dagger_episode_count", dg_episodes, epoch)
+        writer.add_scalar("dagger/dagger_regression", reg_loss_dagger/args.dagger_frames, epoch)
+        writer.add_scalar("dagger/dagger_classification", cls_loss_dagger/args.dagger_frames, epoch)
 
-    # validation episodes
+    writer.add_scalar("status", STATUS_VALIDATING, epoch+STATUS_VALIDATING)
+    # validation episodes --------------------------------------------------------------------------------------------------------------------------
     for idx, (steer, labels, frames) in enumerate(val_loader) :
         print_over_same_line("validation batch {}/{}".format(idx, len(val_loader)))
         labels = labels.to(device)
@@ -123,9 +150,13 @@ for epoch in range(1,args.num_epochs+1):
         loss_reg = regression_loss(pred_reg, steer)
         reg_loss_v += loss_reg.item()
         cls_loss_v += loss_cls.item()
+    # saving current val loss for a shitty way of saving 'good' models
+    current_val_loss = (reg_loss_v + cls_loss_v)/len(val_loader)
+    writer.add_scalar("validation/regression", reg_loss_v/len(val_loader), epoch)
+    writer.add_scalar("validation/classification", cls_loss_v/len(val_loader), epoch)
     
-    
-    # running 10 validation episodes with the current model
+    writer.add_scalar("status", STATUS_SIMULATING, epoch+STATUS_SIMULATING)
+    # simulation episodes --------------------------------------------------------------------------------------------------------------------------
     acv, acp, aco, aiol, aior = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, 
                                                history=args.history, save_images=False, weather=1, vehicles=30, pedestians=30)
     writer.add_scalar("carla/vehicle_collision", sum(acv)/len(acv), epoch)
@@ -133,18 +164,12 @@ for epoch in range(1,args.num_epochs+1):
     writer.add_scalar("carla/other_collision", sum(aco)/len(aco), epoch)
     writer.add_scalar("carla/otherlane_intersection", sum(aiol)/len(aiol), epoch)
     writer.add_scalar("carla/offroad_intersection", sum(aior)/len(aior), epoch)
-    # saving current val loss for a shitty way of saving 'good' models
-    current_val_loss = (reg_loss_v + cls_loss_v)/len(val_loader)
-    writer.add_scalar("training/regression", reg_loss_t/len(train_loader), epoch)
-    writer.add_scalar("training/classification", cls_loss_t/len(train_loader), epoch)
-    writer.add_scalar("validation/regression", reg_loss_v, epoch)
-    writer.add_scalar("validation/classification", cls_loss_v, epoch)
 
     # saving model snapshots
     if args.save_snaps :
         save_path = os.path.join(snapshot_dir,args.name)
         torch.save(optimizer.state_dict(), save_path+"_optimizer")
-        if  current_val_loss < lowest_loss or epoch%5==0:
+        if current_val_loss < lowest_loss or epoch%5==0:
             if current_val_loss < lowest_loss:
                 lowest_loss = current_val_loss
             agent.save(save_path+"_model_{}".format(epoch))

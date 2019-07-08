@@ -187,7 +187,6 @@ def main():
             time.sleep(1)
 
 if __name__ == '__main__':
-
     print("starting carla in server mode\n...")
     my_env = os.environ.copy()
     my_env["SDL_VIDEODRIVER"] = "offscreen"
