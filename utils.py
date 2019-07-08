@@ -105,10 +105,11 @@ def label_to_action_dobule(label) :
         action = [0.0, 0.0, 0.0]
     return action
 
-def compare_controls(expert, agent) :
+def compare_controls(expert, agent, threshold) :
     # steering in opposite directions
     if agent[0]*expert[0] < 0:
         return True
+    if np.abs(agent[0]-expert[0]>=threshold)
     # wrong steering
     if (expert[0]==0 and agent[0]!=0) or (expert[0]!=0 and agent[0]==0):
         return True
