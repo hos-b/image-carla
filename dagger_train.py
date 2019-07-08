@@ -83,8 +83,8 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
             
             # choosing starting position, starting episode
             scene = client.load_settings(settings)
-            number_of_player_starts = len(scene.player_start_spots)
-            player_start = random.randint(0, max(0, number_of_player_starts - 1))
+            # number_of_player_starts = len(scene.player_start_spots)
+            player_start = 42
             client.start_episode(player_start)
             
             frames = torch.zeros(1, 3*history, 256, 256).float().to(device)
@@ -145,7 +145,7 @@ def run_carla_train(total_frames, model, device, optimizer, closs, rloss, histor
                 # comparing controls (should we train this ?)
                 # only train on frames after 50, before that it's bullshit
                 # if compare_controls(expert=expert, agent=agent) and frame_index>50 :
-                if frame_index > 50:
+                if compare_controls(expert=expert, agent=agent) and frame_index > 50:
                     print_over_same_line("dagger frame {}/{} in {} episodes".format(trained_frames,total_frames,episode_count))
                     label = 0 if expert[1] > 0 else \
                             1 if expert[2] > 0 else 2
