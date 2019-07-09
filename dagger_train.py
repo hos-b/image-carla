@@ -177,7 +177,7 @@ def dagger(frames, model, device, history, weather, vehicles, pedestians, DG_nex
         try:
             reg_loss_dagger, cls_loss_dagger, episode_count = run_carla_train(total_frames=frames, model=model, device=device, history=history, 
                                                                               weather=weather, vehicles=vehicles, pedestians=pedestians, 
-                                                                              G_next_episode=DG_next_episode, DG_threshold=DG_threshold,
+                                                                              DG_next_episode=DG_next_episode, DG_threshold=DG_threshold,
                                                                               DG_next_location=DG_next_location,)
             print('Done.')
             return reg_loss_dagger, cls_loss_dagger, episode_count

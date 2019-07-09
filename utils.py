@@ -99,7 +99,7 @@ def action_to_label_double(action):
     # brake = 1
     # no-op = 2
 
-def label_to_action_dobule(cls, reg) :
+def label_to_action_dobule(label, reg) :
     """
     converting doublenet's output to actions
     output : [steering, throttle, brake]
