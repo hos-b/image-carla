@@ -196,6 +196,7 @@ if __name__ == "__main__":
     agent.net.load_state_dict(torch.load("snaps/{}".format(model_name)))
     acv, acp, aco, aiol, aior = evaluate_model(10,400,agent,device,3,True,1,30,30)
     os.system("mkdir data/{}".format(model_name))
+    os.system("cp snaps/{} data/{}".format(model_name, model_name))
     for i in range(10):
         os.system("ffmpeg -r 20 -i data/RGBFront_e{:02d}_f%03d.png -b 500000  data/{}/episode_{}.mp4".format(i,model_name,i))
     os.system("rm -f data/*.png")
