@@ -110,7 +110,7 @@ for epoch in range(1,args.num_epochs+1):
     # dagger episodes ------------------------------------------------------------------------------------------------------------------------------
     if args.dagger:
         writer.add_scalar("status", STATUS_RECORDING_DAGGER, epoch+STATUS_RECORDING_DAGGER)
-        next_loc = 
+        next_loc = 0
         dg_episodes = dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, vehicles=30, pedestians=30, 
                             DG_next_location=next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.15)
         dagger_episode_index += dg_episodes
