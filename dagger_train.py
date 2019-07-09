@@ -91,8 +91,9 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
             
             # choosing starting position, starting episode
             scene = client.load_settings(settings)
-            # number_of_player_starts = len(scene.player_start_spots)
-            player_start = DG_next_location
+            number_of_player_starts = len(scene.player_start_spots)
+            # going through them one by one
+            player_start = random.randint(0, max(0, number_of_player_starts - 1))
             client.start_episode(player_start)
             # dataset 
             dataset = hdf5_file.create_dataset("dagger_{:06d}".format(dagger_episode),shape =(1,), maxshape=(None,), chunks=(1,), compression="lzf", dtype=imitation_type)

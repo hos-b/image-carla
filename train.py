@@ -76,7 +76,7 @@ my_env["SDL_VIDEODRIVER"] = "offscreen"
 FNULL = open(os.devnull, 'w')
 subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '-ResX=16', 'ResY=9'], stdout=FNULL, stderr=FNULL, env=my_env)
 print("done")
-
+#train.py --snap -name=dnet_h3w_svdag -bsize=16 -val_episodes=10 -val_frames=400 -history=3 --weighted --dagger -dagger_frames=150
 print("training ...")
 # lowest loss : save  best snapshots of the network
 lowest_loss = 20
@@ -110,8 +110,9 @@ for epoch in range(1,args.num_epochs+1):
     # dagger episodes ------------------------------------------------------------------------------------------------------------------------------
     if args.dagger:
         writer.add_scalar("status", STATUS_RECORDING_DAGGER, epoch+STATUS_RECORDING_DAGGER)
+        next_loc = 
         dg_episodes = dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, vehicles=30, pedestians=30, 
-                            DG_next_location=42, DG_next_episode=dagger_episode_index, DG_threshold=0.15)
+                            DG_next_location=next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.15)
         dagger_episode_index += dg_episodes
         # dagger loader
         writer.add_scalar("status", STATUS_TRAINING_DAGGER, epoch+STATUS_TRAINING_DAGGER)
@@ -134,8 +135,8 @@ for epoch in range(1,args.num_epochs+1):
             writer.add_scalar("iteration/dgr_classification", loss_cls.item(), (epoch-1)*len(daggr_loader)+idx)
             writer.add_scalar("iteration/dgr_regression", loss_reg.item(), (epoch-1)*len(daggr_loader)+idx)
         writer.add_scalar("dagger/dagger_episode_count", dg_episodes, epoch)
-        writer.add_scalar("dagger/dagger_regression", reg_loss_dagger/args.dagger_frames, epoch)
-        writer.add_scalar("dagger/dagger_classification", cls_loss_dagger/args.dagger_frames, epoch)
+        writer.add_scalar("dagger/dagger_regression", reg_loss_d/args.dagger_frames, epoch)
+        writer.add_scalar("dagger/dagger_classification", cls_loss_d/args.dagger_frames, epoch)
 
     writer.add_scalar("status", STATUS_VALIDATING, epoch+STATUS_VALIDATING)
     # validation episodes --------------------------------------------------------------------------------------------------------------------------
@@ -173,6 +174,5 @@ for epoch in range(1,args.num_epochs+1):
             if current_val_loss < lowest_loss:
                 lowest_loss = current_val_loss
             agent.save(save_path+"_model_{}".format(epoch))
-            print("saved snapshot at epoch {}".format(epoch))
-            
+            print("saved snapshot at epoch {}".format(epoch))            
 writer.close()
