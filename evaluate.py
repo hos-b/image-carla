@@ -124,7 +124,7 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
                 pred_cls = torch.argmax(pred_cls)
                 pred_cls = pred_cls.item()
                 pred_reg = pred_reg.item()
-                agent = label_to_action_dobule(pred_cls)
+                agent = label_to_action_dobule(pred_cls, pred_reg)
 
                 # sending back agent's controls
                 control = VehicleControl()

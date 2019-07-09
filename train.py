@@ -107,6 +107,7 @@ for epoch in range(1,args.num_epochs+1):
         optimizer.step()
         writer.add_scalar("iteration/trn_classification", loss_cls.item(), (epoch-1)*len(train_loader)+idx)
         writer.add_scalar("iteration/trn_regression", loss_reg.item(), (epoch-1)*len(train_loader)+idx)
+        break
     writer.add_scalar("training/regression", reg_loss_t/len(train_loader), epoch)
     writer.add_scalar("training/classification", cls_loss_t/len(train_loader), epoch)
     # dagger episodes ------------------------------------------------------------------------------------------------------------------------------

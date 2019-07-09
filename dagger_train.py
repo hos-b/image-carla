@@ -156,7 +156,7 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                     if compare_controls(expert=expert[0:3], agent=agent, threshold=DG_threshold) and frame_index > 50:
                         record = True
                 if record :
-                    print_over_same_line("dagger frame {}/{} in {} episodes".format(trained_frames,total_frames,dagger_episode_count))
+                    print_over_same_line("dagger frame {}/{} in {} episodes".format(saved_frames,total_frames,dagger_episode_count))
                     data = np.array([(dagger_frame, expert)], dtype=imitation_type)
                     dataset.resize(dagger_index+2, axis=0)
                     dataset[dagger_index] = data
