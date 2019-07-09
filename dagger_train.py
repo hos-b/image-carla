@@ -95,8 +95,6 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
             # going through them one by one
             player_start = random.randint(0, max(0, number_of_player_starts - 1))
             client.start_episode(player_start)
-            # dataset 
-            dataset = hdf5_file.create_dataset("dagger_{:06d}".format(dagger_episode),shape =(1,), maxshape=(None,), chunks=(1,), compression="lzf", dtype=imitation_type)
             # keeping track of frames in this episode
             dagger_index = 0
             for frame_index in range(1000):
@@ -155,6 +153,9 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                 if not record : 
                     if compare_controls(expert=expert[0:3], agent=agent, threshold=DG_threshold) and frame_index > 50:
                         record = True
+                        # dataset created only when there are frames to train
+                        # it's done here because carla connections tend to fail a lot  
+                        dataset = hdf5_file.create_dataset("dagger_{:06d}".format(dagger_episode),shape =(1,), maxshape=(None,), chunks=(1,), compression="lzf", dtype=imitation_type)
                 if record :
                     print_over_same_line("dagger frame {}/{} in {} episodes".format(saved_frames,total_frames,dagger_episode_count))
                     data = np.array([(dagger_frame, expert)], dtype=imitation_type)
@@ -164,10 +165,8 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                     dagger_index += 1
                     if saved_frames>= total_frames:
                         break
-            # if something's been saved this episode, start a new dataset
-            # could lead to errors for calling the function twice
-            if dagger_index > 0 :
-                dagger_episode_count +=1
+            # increase the index for the next dataset object
+            dagger_episode_count +=1
 
         hdf5_file.close()
         return dagger_episode_count
