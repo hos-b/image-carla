@@ -80,8 +80,10 @@ print("done")
 print("training ...")
 # lowest loss : save  best snapshots of the network
 lowest_loss = 20
-# dagger episodes ran so far
+# dagger init
 dagger_episode_index = 0
+print("removing old dagger dataset")
+os.system("rm -f /tmp/dagger_dataset.hdf5")
 for epoch in range(1,args.num_epochs+1):    
     print("epoch {}/{}".format(epoch,args.num_epochs))
     reg_loss_t = reg_loss_v = reg_loss_d = 0
@@ -110,7 +112,7 @@ for epoch in range(1,args.num_epochs+1):
     # dagger episodes ------------------------------------------------------------------------------------------------------------------------------
     if args.dagger:
         writer.add_scalar("status", STATUS_RECORDING_DAGGER, epoch+STATUS_RECORDING_DAGGER)
-        next_loc = 0
+        next_loc = 0 #TODO figure out a good system
         dg_episodes = dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, vehicles=30, pedestians=30, 
                             DG_next_location=next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.15)
         dagger_episode_index += dg_episodes
