@@ -12,6 +12,7 @@ import subprocess
 import torchvision.transforms as transforms
 import torch
 from utils import label_to_action_dobule
+from utils import action_to_label_double
 from utils import compare_controls
 from utils import print_over_same_line
 
@@ -54,11 +55,9 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
         transform_list.append(transforms.ToTensor())
         transform_list.append(transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
         transform = transforms.Compose(transform_list)
-        # loss values to return
-        reg_loss_dagger = 0
-        cls_loss_dagger = 0
         # frames trained
         saved_frames = 0
+        dagger_instances = np.zeros((3))
         # keeping track of episodes
         dagger_episode_count = 0
         dagger_episode = DG_next_episode
@@ -158,6 +157,7 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                         dataset = hdf5_file.create_dataset("dagger_{:06d}".format(dagger_episode),shape =(1,), maxshape=(None,), chunks=(1,), compression="lzf", dtype=imitation_type)
                 if record :
                     print_over_same_line("dagger frame {}/{} in {} episodes".format(saved_frames+1,total_frames,dagger_episode_count+1))
+                    dagger_instances[action_to_label_double(expert)] += 1
                     data = np.array([(dagger_frame, expert)], dtype=imitation_type)
                     dataset.resize(dagger_index+2, axis=0)
                     dataset[dagger_index] = data
@@ -167,19 +167,18 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                         break
             # increase the index for the next dataset object
             dagger_episode_count +=1
-
         hdf5_file.close()
-        return dagger_episode_count
+        return dagger_episode_count, dagger_instances
 
 def dagger(frames, model, device, history, weather, vehicles, pedestians, DG_next_location, DG_next_episode, DG_threshold):
     while True:
         try:
-            episode_count = run_carla_train(total_frames=frames, model=model, device=device, history=history, 
+            episode_count, instances = run_carla_train(total_frames=frames, model=model, device=device, history=history, 
                                                                               weather=weather, vehicles=vehicles, pedestians=pedestians, 
                                                                               DG_next_episode=DG_next_episode, DG_threshold=DG_threshold,
                                                                               DG_next_location=DG_next_location,)
             print('Done.')
-            return episode_count
+            return episode_count, instances
         except TCPConnectionError as error:
             logging.error(error)
             time.sleep(1)

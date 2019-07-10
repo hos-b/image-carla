@@ -82,6 +82,9 @@ print("training ...")
 lowest_loss = 20
 # dagger init
 dagger_episode_index = 0
+dagger_weights = torch.Tensor([1, 1, 1])
+dagger_instances = np.zeros((3))
+
 print("removing old dagger dataset")
 os.system("rm -f /tmp/dagger_dataset.hdf5")
 for epoch in range(1,args.num_epochs+1):    
@@ -113,12 +116,17 @@ for epoch in range(1,args.num_epochs+1):
     if args.dagger:
         writer.add_scalar("status", STATUS_RECORDING_DAGGER, epoch+STATUS_RECORDING_DAGGER)
         next_loc = 0 #TODO figure out a good system
-        dg_episodes = dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, vehicles=30, pedestians=30, 
+        dg_episodes, instances= dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, vehicles=30, pedestians=30, 
                             DG_next_location=next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.15)
         dagger_episode_index += dg_episodes
+        dagger_instances + = instances
+        median = np.median(dagger_instances)
+        dg_weights = median/dagger_instances
+        dagger_weights = torch.Tensor(dg_episodes).to(device)
         # dagger loader
         writer.add_scalar("status", STATUS_TRAINING_DAGGER, epoch+STATUS_TRAINING_DAGGER)
         daggr_loader = get_data_loader(batch_size=args.batch_size, train=False, history=args.history, dagger=True)
+        dagger_loss = torch.nn.CrossEntropyLoss(weight=dagger_weights).to(device)
         for idx, (steer, labels, frames) in enumerate(daggr_loader) :
             print_over_same_line("dagger batch {}/{}".format(idx, len(daggr_loader)))
             labels = labels.to(device)
@@ -127,7 +135,7 @@ for epoch in range(1,args.num_epochs+1):
             agent.net.train()
             optimizer.zero_grad()
             pred_cls, pred_reg  = agent.net(frames)
-            loss_cls = classification_loss(pred_cls, labels.squeeze(1))
+            loss_cls = dagger_loss(pred_cls, labels.squeeze(1))
             loss_reg = regression_loss(pred_reg, steer)
             loss_cls.backward(retain_graph=True)
             loss_reg.backward()
