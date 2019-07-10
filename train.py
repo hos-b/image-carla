@@ -109,7 +109,6 @@ for epoch in range(1,args.num_epochs+1):
         optimizer.step()
         writer.add_scalar("iteration/trn_classification", loss_cls.item(), (epoch-1)*len(train_loader)+idx)
         writer.add_scalar("iteration/trn_regression", loss_reg.item(), (epoch-1)*len(train_loader)+idx)
-        break
     writer.add_scalar("training/regression", reg_loss_t/len(train_loader), epoch)
     writer.add_scalar("training/classification", cls_loss_t/len(train_loader), epoch)
     # dagger episodes ------------------------------------------------------------------------------------------------------------------------------
@@ -166,7 +165,6 @@ for epoch in range(1,args.num_epochs+1):
         loss_reg = regression_loss(pred_reg, steer)
         reg_loss_v += loss_reg.item()
         cls_loss_v += loss_cls.item()
-        break
     # saving current val loss for a shitty way of saving 'good' models
     current_val_loss = (reg_loss_v + cls_loss_v)/len(val_loader)
     writer.add_scalar("validation/regression", reg_loss_v/len(val_loader), epoch)
@@ -174,13 +172,13 @@ for epoch in range(1,args.num_epochs+1):
     
     writer.add_scalar("status", STATUS_SIMULATING, epoch+STATUS_SIMULATING)
     # simulation episodes --------------------------------------------------------------------------------------------------------------------------
-    acv, acp, aco, aiol, aior = 0,0,0,0,0#evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, 
-                                               #history=args.history, save_images=False, weather=1, vehicles=30, pedestians=30)
-    #writer.add_scalar("carla/vehicle_collision", sum(acv)/len(acv), epoch)
-    #writer.add_scalar("carla/pedestrian_collision", sum(acp)/len(acp), epoch)
-    #writer.add_scalar("carla/other_collision", sum(aco)/len(aco), epoch)
-    #writer.add_scalar("carla/otherlane_intersection", sum(aiol)/len(aiol), epoch)
-    #writer.add_scalar("carla/offroad_intersection", sum(aior)/len(aior), epoch)
+    acv, acp, aco, aiol, aior = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, 
+                                               history=args.history, save_images=False, weather=1, vehicles=30, pedestians=30)
+    writer.add_scalar("carla/vehicle_collision", sum(acv)/len(acv), epoch)
+    writer.add_scalar("carla/pedestrian_collision", sum(acp)/len(acp), epoch)
+    writer.add_scalar("carla/other_collision", sum(aco)/len(aco), epoch)
+    writer.add_scalar("carla/otherlane_intersection", sum(aiol)/len(aiol), epoch)
+    writer.add_scalar("carla/offroad_intersection", sum(aior)/len(aior), epoch)
 
     # saving model snapshots
     if args.save_snaps :

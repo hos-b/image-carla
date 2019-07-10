@@ -35,12 +35,21 @@ class CarlaHDF5(torch.utils.data.Dataset):
         self.keys = self.keys[start:end]
         self.ds_count = len(self.keys)
 
+        self.cummulative_sizes = np.zeros((self.ds_count))
+
         print("found {} episodes ({}-{})".format(self.ds_count, start, end))
         self.sizes = np.ndarray(shape=(self.ds_count), dtype=np.uint16)
+        runsum = 0
         for index in range(self.ds_count):
             self.sizes[index] = self.data[self.keys[index]].shape[0]
+            runsum += self.sizes[index]
+            # on the fly fix for broken dataset
+            self.cummulative_sizes[index] = runsum -1
+        
+        # if it's the dagger dataset, revert the fix
+        if self.hdf5_name == DGR_NAME :
+            self.cummulative_sizes = np.cumsum(self.sizes)
 
-        self.cummulative_sizes = np.cumsum(self.sizes)
         self.n_samples = self.cummulative_sizes[-1]
         print("total frame count {}".format(self.n_samples))
 
