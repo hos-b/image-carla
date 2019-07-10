@@ -66,7 +66,6 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
         network_frames = torch.zeros(1, 3*history, 256, 256).float().to(device)
         # record flag, when set the history buffer is filled with the first frame
         # after it is set, all frames should be set
-        record = False
         for episode in range(10000):
             # dagger end
             if saved_frames >= total_frames:
@@ -97,6 +96,7 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
             client.start_episode(player_start)
             # keeping track of frames in this episode
             dagger_index = 0
+            record = False
             for frame_index in range(1000):
                 measurements, sensor_data = client.read_data()
                 # checking whether the episode should end (i.e. car crash or fucked up stuff)
