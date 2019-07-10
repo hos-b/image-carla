@@ -176,11 +176,11 @@ for epoch in range(1,args.num_epochs+1):
     # simulation episodes --------------------------------------------------------------------------------------------------------------------------
     acv, acp, aco, aiol, aior = 0,0,0,0,0#evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, 
                                                #history=args.history, save_images=False, weather=1, vehicles=30, pedestians=30)
-    writer.add_scalar("carla/vehicle_collision", sum(acv)/len(acv), epoch)
-    writer.add_scalar("carla/pedestrian_collision", sum(acp)/len(acp), epoch)
-    writer.add_scalar("carla/other_collision", sum(aco)/len(aco), epoch)
-    writer.add_scalar("carla/otherlane_intersection", sum(aiol)/len(aiol), epoch)
-    writer.add_scalar("carla/offroad_intersection", sum(aior)/len(aior), epoch)
+    #writer.add_scalar("carla/vehicle_collision", sum(acv)/len(acv), epoch)
+    #writer.add_scalar("carla/pedestrian_collision", sum(acp)/len(acp), epoch)
+    #writer.add_scalar("carla/other_collision", sum(aco)/len(aco), epoch)
+    #writer.add_scalar("carla/otherlane_intersection", sum(aiol)/len(aiol), epoch)
+    #writer.add_scalar("carla/offroad_intersection", sum(aior)/len(aior), epoch)
 
     # saving model snapshots
     if args.save_snaps :
