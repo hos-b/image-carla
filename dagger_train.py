@@ -165,7 +165,7 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                 else :
                     dagger_instances[action_to_label_double(expert)[0]] += 1
                     data = np.array([(dagger_frame, expert)], dtype=imitation_type)
-                    dataset.resize(dagger_index+2, axis=0)
+                    dataset.resize(dagger_index+1, axis=0)
                     dataset[dagger_index] = data
                     saved_frames +=1
                     dagger_index += 1
