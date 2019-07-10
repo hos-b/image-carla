@@ -153,8 +153,12 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                     if compare_controls(expert=expert[0:3], agent=agent, threshold=DG_threshold) and frame_index > 50:
                         record = True
                         # dataset created only when there are frames to train
-                        # it's done here because carla connections tend to fail a lot  
+                        # it's done here because carla connections tend to fail a lot
                         dataset = hdf5_file.create_dataset("dagger_{:06d}".format(dagger_episode),shape =(1,), maxshape=(None,), chunks=(1,), compression="lzf", dtype=imitation_type)
+                        # increase the index for the next dataset object. done here because 
+                        # if it fails mid episode you have to go to the next one ffs fuck carla
+                        # it's on the same fucking machine and it's failing to connect
+                        dagger_episode_count +=1
                 if record :
                     print_over_same_line("dagger frame {}/{} in {} episodes".format(saved_frames+1,total_frames,dagger_episode_count+1))
                     dagger_instances[action_to_label_double(expert)[0]] += 1
@@ -165,8 +169,6 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                     dagger_index += 1
                     if saved_frames>= total_frames:
                         break
-            # increase the index for the next dataset object
-            dagger_episode_count +=1
         hdf5_file.close()
         return dagger_episode_count, dagger_instances
 
