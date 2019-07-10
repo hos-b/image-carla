@@ -103,13 +103,13 @@ for epoch in range(1,args.num_epochs+1):
         pred_cls, pred_reg  = agent.net(frames)
         loss_cls = classification_loss(pred_cls, labels.squeeze(1))
         loss_reg = regression_loss(pred_reg, steer)
-        loss_cls.backward(retain_graph=True)
-        loss_reg.backward()
+        (loss_cls + loss_reg).backward()
         reg_loss_t += loss_reg.item()
         cls_loss_t += loss_cls.item()
         optimizer.step()
         writer.add_scalar("iteration/trn_classification", loss_cls.item(), (epoch-1)*len(train_loader)+idx)
         writer.add_scalar("iteration/trn_regression", loss_reg.item(), (epoch-1)*len(train_loader)+idx)
+        break
     writer.add_scalar("training/regression", reg_loss_t/len(train_loader), epoch)
     writer.add_scalar("training/classification", cls_loss_t/len(train_loader), epoch)
     # dagger episodes ------------------------------------------------------------------------------------------------------------------------------
@@ -122,7 +122,7 @@ for epoch in range(1,args.num_epochs+1):
         dagger_instances +=instances
         median = np.median(dagger_instances)
         dg_weights = median/dagger_instances
-        dagger_weights = torch.Tensor(dg_episodes).to(device)
+        dagger_weights = torch.Tensor(dg_weights).to(device)
         # dagger loader
         writer.add_scalar("status", STATUS_TRAINING_DAGGER, epoch+STATUS_TRAINING_DAGGER)
         daggr_loader = get_data_loader(batch_size=args.batch_size, train=False, history=args.history, dagger=True)
