@@ -157,7 +157,7 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                         dataset = hdf5_file.create_dataset("dagger_{:06d}".format(dagger_episode),shape =(1,), maxshape=(None,), chunks=(1,), compression="lzf", dtype=imitation_type)
                 if record :
                     print_over_same_line("dagger frame {}/{} in {} episodes".format(saved_frames+1,total_frames,dagger_episode_count+1))
-                    dagger_instances[action_to_label_double(expert)] += 1
+                    dagger_instances[action_to_label_double(expert)[0]] += 1
                     data = np.array([(dagger_frame, expert)], dtype=imitation_type)
                     dataset.resize(dagger_index+2, axis=0)
                     dataset[dagger_index] = data

@@ -117,9 +117,9 @@ for epoch in range(1,args.num_epochs+1):
         writer.add_scalar("status", STATUS_RECORDING_DAGGER, epoch+STATUS_RECORDING_DAGGER)
         next_loc = 0 #TODO figure out a good system
         dg_episodes, instances= dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, vehicles=30, pedestians=30, 
-                            DG_next_location=next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.15)
-        dagger_episode_index += dg_episodes
-        dagger_instances + = instances
+                            DG_next_location=next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.05)
+        dagger_episode_index +=dg_episodes
+        dagger_instances +=instances
         median = np.median(dagger_instances)
         dg_weights = median/dagger_instances
         dagger_weights = torch.Tensor(dg_episodes).to(device)
