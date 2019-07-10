@@ -109,7 +109,6 @@ for epoch in range(1,args.num_epochs+1):
         optimizer.step()
         writer.add_scalar("iteration/trn_classification", loss_cls.item(), (epoch-1)*len(train_loader)+idx)
         writer.add_scalar("iteration/trn_regression", loss_reg.item(), (epoch-1)*len(train_loader)+idx)
-        break
     writer.add_scalar("training/regression", reg_loss_t/len(train_loader), epoch)
     writer.add_scalar("training/classification", cls_loss_t/len(train_loader), epoch)
     # dagger episodes ------------------------------------------------------------------------------------------------------------------------------
@@ -120,9 +119,12 @@ for epoch in range(1,args.num_epochs+1):
                             DG_next_location=next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.05)
         dagger_episode_index +=dg_episodes
         dagger_instances +=instances
+        # preventing inf
+        dagger_instances[3] += 1 if dagger_instances[3] == 0 else 0
         median = np.median(dagger_instances)
         dg_weights = median/dagger_instances
         dagger_weights = torch.Tensor(dg_weights).to(device)
+        dagger_instances[3] -= 1 if dagger_instances[3] == 1 else 0
         # dagger loader
         writer.add_scalar("status", STATUS_TRAINING_DAGGER, epoch+STATUS_TRAINING_DAGGER)
         daggr_loader = get_data_loader(batch_size=args.batch_size, train=False, history=args.history, dagger=True)
