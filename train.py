@@ -121,12 +121,12 @@ for epoch in range(1,args.num_epochs+1):
         dagger_episode_index +=dg_episodes
         dagger_instances +=instances
         # preventing inf
-        dagger_instances[2] += 1 if dagger_instances[3] == 0 else 0
+        dagger_instances[2] += 1 if dagger_instances[2] == 0 else 0
         median = np.median(dagger_instances)
         dg_weights = median/dagger_instances
         print ("DI : {}\nmedian {}\nW: {}".format(dagger_instances, median, dg_weights))
         dagger_weights = torch.Tensor(dg_weights).to(device)
-        dagger_instances[2] -= 1 if dagger_instances[3] == 1 else 0
+        dagger_instances[2] -= 1 if dagger_instances[2] == 1 else 0
         # dagger loader
         writer.add_scalar("status", STATUS_TRAINING_DAGGER, epoch+STATUS_TRAINING_DAGGER)
         daggr_loader = get_data_loader(batch_size=args.batch_size, train=False, history=args.history, dagger=True)
