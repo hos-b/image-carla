@@ -155,7 +155,7 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                         record = True
                         # dataset created only when there are frames to train
                         # it's done here because carla connections tend to fail a lot
-                        dataset = hdf5_file.create_dataset("dagger_{:06d}".format(dagger_episode),shape =(1,), maxshape=(None,), chunks=(1,), compression="lzf", dtype=imitation_type)
+                        dataset = hdf5_file.create_dataset("dagger_{:06d}".format(dagger_episode_count),shape =(1,), maxshape=(None,), chunks=(1,), compression="lzf", dtype=imitation_type)
                         # increase the index for the next dataset object. done here because 
                         # if it fails mid episode you have to go to the next one ffs fuck carla
                         # it's on the same fucking machine and it's failing to connect
