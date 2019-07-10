@@ -35,7 +35,7 @@ class CarlaHDF5(torch.utils.data.Dataset):
         self.keys = self.keys[start:end]
         self.ds_count = len(self.keys)
 
-        self.cummulative_sizes = np.zeros((self.ds_count))
+        self.cummulative_sizes = np.zeros((self.ds_count), dtype=int)
 
         print("found {} episodes ({}-{})".format(self.ds_count, start, end))
         self.sizes = np.ndarray(shape=(self.ds_count), dtype=np.uint16)
