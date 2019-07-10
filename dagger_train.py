@@ -58,6 +58,7 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
         # frames trained
         saved_frames = 0
         dagger_instances = np.zeros((3))
+        skipped_frames = 0
         # keeping track of episodes
         dagger_episode_count = 0
         dagger_episode = DG_next_episode
@@ -149,7 +150,7 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
 
                 # comparing controls (should we save this ?)
                 # only save frames after 50, before that it's bullshit
-                if not record : 
+                if not record :
                     if compare_controls(expert=expert[0:3], agent=agent, threshold=DG_threshold) and frame_index > 50:
                         record = True
                         # dataset created only when there are frames to train
@@ -159,8 +160,9 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                         # if it fails mid episode you have to go to the next one ffs fuck carla
                         # it's on the same fucking machine and it's failing to connect
                         dagger_episode_count +=1
-                if record :
-                    print_over_same_line("dagger frame {}/{} in {} episodes".format(saved_frames+1,total_frames,dagger_episode_count+1))
+                    else :
+                        skipped_frames+=1
+                else :
                     dagger_instances[action_to_label_double(expert)[0]] += 1
                     data = np.array([(dagger_frame, expert)], dtype=imitation_type)
                     dataset.resize(dagger_index+2, axis=0)
@@ -169,6 +171,7 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                     dagger_index += 1
                     if saved_frames>= total_frames:
                         break
+                print_over_same_line("dagger frame {}/{} in {} episodes; skipped {}".format(saved_frames,total_frames,dagger_episode_count,skipped_frames))
         hdf5_file.close()
         return dagger_episode_count, dagger_instances
 

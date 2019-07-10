@@ -20,7 +20,7 @@ class CarlaHDF5(torch.utils.data.Dataset):
         self.validation_episodes = kwargs.get("validation_episodes", 5)
         self.transform  = kwargs.get("transform")
         self.hdf5_name = kwargs.get("hdf5_name")
-        print("opening {}".format(PKG_NAME))
+        print("opening {}".format(self.hdf5_name))
         self.data = h5py.File(os.path.join(DATASET_DIR, self.hdf5_name), "r")        
         self.keys = list(self.data.keys())
         self.ds_count = len(self.keys)
