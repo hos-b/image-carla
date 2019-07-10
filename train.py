@@ -175,7 +175,7 @@ for epoch in range(1,args.num_epochs+1):
     writer.add_scalar("status", STATUS_SIMULATING, epoch+STATUS_SIMULATING)
     # simulation episodes --------------------------------------------------------------------------------------------------------------------------
     acv, acp, aco, aiol, aior = 0,0,0,0,0#evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, 
-                                               history=args.history, save_images=False, weather=1, vehicles=30, pedestians=30)
+                                               #history=args.history, save_images=False, weather=1, vehicles=30, pedestians=30)
     writer.add_scalar("carla/vehicle_collision", sum(acv)/len(acv), epoch)
     writer.add_scalar("carla/pedestrian_collision", sum(acp)/len(acp), epoch)
     writer.add_scalar("carla/other_collision", sum(aco)/len(aco), epoch)
