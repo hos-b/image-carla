@@ -116,14 +116,16 @@ for epoch in range(1,args.num_epochs+1):
     if args.dagger:
         writer.add_scalar("status", STATUS_RECORDING_DAGGER, epoch+STATUS_RECORDING_DAGGER)
         next_loc = 0 #TODO figure out a good system
-        dg_episodes, instances= dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, vehicles=30, pedestians=30, 
+        dg_episodes, instances, skipped_frames = dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, vehicles=30, pedestians=30, 
                             DG_next_location=next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.05)
         dagger_episode_index +=dg_episodes
         dagger_instances +=instances
-        # preventing inf
+        # preventing inf in no-op. technically should
+        # be repeated for 0 and 1 too but nah
         dagger_instances[2] += 1 if dagger_instances[2] == 0 else 0
         median = np.median(dagger_instances)
         dg_weights = median/dagger_instances
+        print("dagger weights : {}".format(dg_weights))
         dagger_weights = torch.Tensor(dg_weights).to(device)
         dagger_instances[2] -= 1 if dagger_instances[2] == 1 else 0
         # dagger loader
@@ -147,6 +149,7 @@ for epoch in range(1,args.num_epochs+1):
             writer.add_scalar("iteration/dgr_classification", loss_cls.item(), (epoch-1)*len(daggr_loader)+idx)
             writer.add_scalar("iteration/dgr_regression", loss_reg.item(), (epoch-1)*len(daggr_loader)+idx)
         writer.add_scalar("dagger/dagger_episode_count", dg_episodes, epoch)
+        writer.add_scalar("dagger/dagger_skipped_frames", skipped_frames, epoch)
         writer.add_scalar("dagger/dagger_regression", reg_loss_d/args.dagger_frames, epoch)
         writer.add_scalar("dagger/dagger_classification", cls_loss_d/args.dagger_frames, epoch)
 
@@ -163,6 +166,7 @@ for epoch in range(1,args.num_epochs+1):
         loss_reg = regression_loss(pred_reg, steer)
         reg_loss_v += loss_reg.item()
         cls_loss_v += loss_cls.item()
+        break
     # saving current val loss for a shitty way of saving 'good' models
     current_val_loss = (reg_loss_v + cls_loss_v)/len(val_loader)
     writer.add_scalar("validation/regression", reg_loss_v/len(val_loader), epoch)
@@ -170,7 +174,7 @@ for epoch in range(1,args.num_epochs+1):
     
     writer.add_scalar("status", STATUS_SIMULATING, epoch+STATUS_SIMULATING)
     # simulation episodes --------------------------------------------------------------------------------------------------------------------------
-    acv, acp, aco, aiol, aior = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, 
+    acv, acp, aco, aiol, aior = 0,0,0,0,0#evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, 
                                                history=args.history, save_images=False, weather=1, vehicles=30, pedestians=30)
     writer.add_scalar("carla/vehicle_collision", sum(acv)/len(acv), epoch)
     writer.add_scalar("carla/pedestrian_collision", sum(acp)/len(acp), epoch)
@@ -182,7 +186,7 @@ for epoch in range(1,args.num_epochs+1):
     if args.save_snaps :
         save_path = os.path.join(snapshot_dir,args.name)
         torch.save(optimizer.state_dict(), save_path+"_optimizer")
-        if current_val_loss < lowest_loss or epoch%2==0:
+        if current_val_loss < lowest_loss or epoch%2==0 or (aiol+aior)<0.1:
             if current_val_loss < lowest_loss:
                 lowest_loss = current_val_loss
             agent.save(save_path+"_model_{}".format(epoch))

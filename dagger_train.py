@@ -61,7 +61,6 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
         skipped_frames = 0
         # keeping track of episodes
         dagger_episode_count = 0
-        dagger_episode = DG_next_episode
         # network input
         network_frames = torch.zeros(1, 3*history, 256, 256).float().to(device)
         # record flag, when set the history buffer is filled with the first frame
@@ -155,7 +154,8 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                         record = True
                         # dataset created only when there are frames to train
                         # it's done here because carla connections tend to fail a lot
-                        dataset = hdf5_file.create_dataset("dagger_{:06d}".format(dagger_episode_count),shape =(1,), maxshape=(None,), chunks=(1,), compression="lzf", dtype=imitation_type)
+                        dataset = hdf5_file.create_dataset("dagger_{:06d}".format(DG_next_episode+dagger_episode_count),shape =(1,), 
+                                                            maxshape=(None,), chunks=(1,), compression="lzf", dtype=imitation_type)
                         # increase the index for the next dataset object. done here because 
                         # if it fails mid episode you have to go to the next one ffs fuck carla
                         # it's on the same fucking machine and it's failing to connect
@@ -173,17 +173,17 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                         break
                 print_over_same_line("dagger frame {}/{} in {} episodes; skipped {}".format(saved_frames,total_frames,dagger_episode_count,skipped_frames))
         hdf5_file.close()
-        return dagger_episode_count, dagger_instances
+        return dagger_episode_count, dagger_instances, skipped_frames-51*dagger_episode_count
 
 def dagger(frames, model, device, history, weather, vehicles, pedestians, DG_next_location, DG_next_episode, DG_threshold):
     while True:
         try:
-            episode_count, instances = run_carla_train(total_frames=frames, model=model, device=device, history=history, 
+            episode_count, instances, skipped = run_carla_train(total_frames=frames, model=model, device=device, history=history, 
                                                                               weather=weather, vehicles=vehicles, pedestians=pedestians, 
                                                                               DG_next_episode=DG_next_episode, DG_threshold=DG_threshold,
                                                                               DG_next_location=DG_next_location,)
             print('Done.')
-            return episode_count, instances
+            return episode_count, instances, skipped
         except TCPConnectionError as error:
             logging.error(error)
             time.sleep(1)
