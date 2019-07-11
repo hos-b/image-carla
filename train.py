@@ -87,8 +87,8 @@ dagger_instances = np.zeros((3))
 # learned loss weights
 l2_weight = torch.nn.Parameter(torch.Tensor([-2.0]))
 ce_weight = torch.nn.Parameter(torch.Tensor([0]))
-optimizer.add_param_group({"ce_weight": ce_weight})
-optimizer.add_param_group({"l2_weight": l2_weight})
+optimizer.add_param_group({"params": ce_weight})
+optimizer.add_param_group({"params": l2_weight})
 
 # start training
 print("removing old dagger dataset")
