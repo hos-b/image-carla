@@ -122,7 +122,7 @@ for epoch in range(1,args.num_epochs+1):
         writer.add_scalar("status", STATUS_RECORDING_DAGGER, epoch+STATUS_RECORDING_DAGGER)
         next_loc = 0 #TODO figure out a good system
         dg_episodes, instances, skipped_frames = dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, vehicles=30, pedestians=30, 
-                            DG_next_location=next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.05)
+                            DG_next_location=next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.075)
         dagger_episode_index +=dg_episodes
         dagger_instances +=instances
         # preventing inf in no-op. technically should
@@ -172,7 +172,7 @@ for epoch in range(1,args.num_epochs+1):
         reg_loss_v += loss_reg.item()
         cls_loss_v += loss_cls.item()
     # saving current val loss as a shitty way of saving 'good' models
-    current_val_loss = (reg_loss_v + cls_loss_v)/len(val_loader)
+    current_val_loss = (reg_loss_v + cls_loss_v)/len(val_loader) + (reg_loss_d + cls_loss_d)/len(daggr_loader) 
     writer.add_scalar("validation/regression", reg_loss_v/len(val_loader), epoch)
     writer.add_scalar("validation/classification", cls_loss_v/len(val_loader), epoch)
     

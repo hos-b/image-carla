@@ -102,8 +102,7 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                 # measurements.player_measurements.collision_pedestrians doesn't matter. fuck pedestrians
                 if  measurements.player_measurements.collision_vehicles > 0 \
                     or measurements.player_measurements.collision_other > 0 \
-                    or measurements.player_measurements.intersection_otherlane > 0.2 \
-                    or measurements.player_measurements.intersection_offroad > 0.2 \
+                    or measurements.player_measurements.intersection_offroad > 0.1 \
                     or measurements.player_measurements.autopilot_control.hand_brake \
                     or measurements.player_measurements.autopilot_control.reverse :
                     break
