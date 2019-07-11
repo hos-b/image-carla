@@ -84,7 +84,13 @@ lowest_loss = 20
 dagger_episode_index = 0
 dagger_weights = torch.Tensor([1, 1, 1])
 dagger_instances = np.zeros((3))
+# learned loss weights
+l2_weight = torch.nn.Parameter(torch.Tensor([-2.0]))
+ce_weight = torch.nn.Parameter(torch.Tensor([0]))
+optimizer.add_param_group({"ce_weight": ce_weight})
+optimizer.add_param_group({"l2_weight": l2_weight})
 
+# start training
 print("removing old dagger dataset")
 os.system("rm -f /tmp/dagger_dataset.hdf5")
 for epoch in range(1,args.num_epochs+1):    
@@ -92,18 +98,18 @@ for epoch in range(1,args.num_epochs+1):
     reg_loss_t = reg_loss_v = reg_loss_d = 0
     cls_loss_t = cls_loss_v = cls_loss_d = 0
     writer.add_scalar("status", STATUS_TRAINING, epoch+STATUS_TRAINING)
+    agent.net.train()
     # training episodes ----------------------------------------------------------------------------------------------------------------------------
     for idx, (steer, labels, frames) in enumerate(train_loader) :
         print_over_same_line("training batch {}/{}".format(idx, len(train_loader)))
         labels = labels.to(device)
         frames = frames.to(device)
         steer = steer.to(device)
-        agent.net.train()
         optimizer.zero_grad()
         pred_cls, pred_reg  = agent.net(frames)
         loss_cls = classification_loss(pred_cls, labels.squeeze(1))
         loss_reg = regression_loss(pred_reg, steer)
-        (loss_cls + loss_reg).backward()
+        (loss_cls*torch.exp(-ce_weight)+ ce_weight + loss_reg*torch.exp(-l2_weight)+l2_weight).backward()
         reg_loss_t += loss_reg.item()
         cls_loss_t += loss_cls.item()
         optimizer.step()
@@ -131,17 +137,17 @@ for epoch in range(1,args.num_epochs+1):
         writer.add_scalar("status", STATUS_TRAINING_DAGGER, epoch+STATUS_TRAINING_DAGGER)
         daggr_loader = get_data_loader(batch_size=args.batch_size, train=True, history=args.history, dagger=True)
         dagger_loss = torch.nn.CrossEntropyLoss(weight=dagger_weights).to(device)
+        agent.net.train()
         for idx, (steer, labels, frames) in enumerate(daggr_loader) :
             print_over_same_line("dagger batch {}/{}".format(idx, len(daggr_loader)))
             labels = labels.to(device)
             frames = frames.to(device)
             steer = steer.to(device)
-            agent.net.train()
             optimizer.zero_grad()
             pred_cls, pred_reg  = agent.net(frames)
             loss_cls = dagger_loss(pred_cls, labels.squeeze(1))
             loss_reg = regression_loss(pred_reg, steer)
-            (loss_cls + loss_reg).backward()
+            (loss_cls*torch.exp(-ce_weight)+ce_weight + loss_reg*torch.exp(-l2_weight)+l2_weight).backward()
             reg_loss_d += loss_reg.item()
             cls_loss_d += loss_cls.item()
             optimizer.step()
@@ -165,12 +171,14 @@ for epoch in range(1,args.num_epochs+1):
         loss_reg = regression_loss(pred_reg, steer)
         reg_loss_v += loss_reg.item()
         cls_loss_v += loss_cls.item()
-    # saving current val loss for a shitty way of saving 'good' models
+    # saving current val loss as a shitty way of saving 'good' models
     current_val_loss = (reg_loss_v + cls_loss_v)/len(val_loader)
     writer.add_scalar("validation/regression", reg_loss_v/len(val_loader), epoch)
     writer.add_scalar("validation/classification", cls_loss_v/len(val_loader), epoch)
     
     writer.add_scalar("status", STATUS_SIMULATING, epoch+STATUS_SIMULATING)
+    writer.add_scalar("training/l2_weight", torch.exp(-l2_weight).item(), epoch)
+    writer.add_scalar("training/ce_weight", torch.exp(-ce_weight).item(), epoch)
     # simulation episodes --------------------------------------------------------------------------------------------------------------------------
     acv, acp, aco, aiol, aior = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, 
                                                history=args.history, save_images=False, weather=1, vehicles=30, pedestians=30)
