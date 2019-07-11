@@ -85,8 +85,8 @@ dagger_episode_index = 0
 dagger_weights = torch.Tensor([1, 1, 1])
 dagger_instances = np.zeros((3))
 # learned loss weights
-l2_weight = torch.nn.Parameter(torch.Tensor([-2.0]))
-ce_weight = torch.nn.Parameter(torch.Tensor([0]))
+l2_weight = torch.nn.Parameter(torch.Tensor([-2.0]).to(device))
+ce_weight = torch.nn.Parameter(torch.Tensor([0]).to(device))
 optimizer.add_param_group({"params": ce_weight})
 optimizer.add_param_group({"params": l2_weight})
 
