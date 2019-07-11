@@ -51,7 +51,7 @@ val_loader   = get_data_loader(batch_size=args.batch_size, train=False, history=
 # setting up training device, agent, optimizer, weights --------------------------------------------------------------------------------------------
 print("initializing agent, cuda, loss, optim")
 device = torch.device('cuda')
-agent = CBCAgent(device=device, history=args.history, name='efficient-double')
+agent = CBCAgent(device=device, history=args.history, name='efficient-double-large')
 class_weights = torch.Tensor([1, 1, 1])
 if args.weighted:
     class_weights = torch.Tensor([  1.        ,   0.99284543, 319.17272727]).to(device)
