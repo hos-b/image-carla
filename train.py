@@ -179,12 +179,12 @@ for epoch in range(1,args.num_epochs+1):
     writer.add_scalar("carla/other_collision", sum(aco)/len(aco), epoch)
     writer.add_scalar("carla/otherlane_intersection", sum(aiol)/len(aiol), epoch)
     writer.add_scalar("carla/offroad_intersection", sum(aior)/len(aior), epoch)
-
+    average_fault =  sum(aiol)/len(aiol) +sum(aior)/len(aior)
     # saving model snapshots
     if args.save_snaps :
         save_path = os.path.join(snapshot_dir,args.name)
         torch.save(optimizer.state_dict(), save_path+"_optimizer")
-        if current_val_loss < lowest_loss or epoch%2==0 or (aiol+aior)<0.1:
+        if current_val_loss < lowest_loss or epoch%2==0 or average_fault<0.1:
             if current_val_loss < lowest_loss:
                 lowest_loss = current_val_loss
             agent.save(save_path+"_model_{}".format(epoch))
