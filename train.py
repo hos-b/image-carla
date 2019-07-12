@@ -12,6 +12,7 @@ from agent.cagent import CBCAgent
 from utils import print_over_same_line
 from evaluate import evaluate_model
 from dagger_train import dagger
+import random
 
 STATUS_TRAINING = 0
 STATUS_RECORDING_DAGGER = 1
@@ -84,6 +85,7 @@ lowest_loss = 20
 dagger_episode_index = 0
 dagger_weights = torch.Tensor([1, 1, 1])
 dagger_instances = np.zeros((3))
+dagger_next_loc = 22
 # learned loss weights
 l2_weight = torch.nn.Parameter(torch.Tensor([-2.0]).to(device))
 ce_weight = torch.nn.Parameter(torch.Tensor([0]).to(device))
@@ -120,18 +122,23 @@ for epoch in range(1,args.num_epochs+1):
     # dagger episodes ------------------------------------------------------------------------------------------------------------------------------
     if args.dagger:
         writer.add_scalar("status", STATUS_RECORDING_DAGGER, epoch+STATUS_RECORDING_DAGGER)
-        next_loc = 0 #TODO figure out a good system
         dg_episodes, instances, skipped_frames = dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, vehicles=30, pedestians=30, 
-                            DG_next_location=next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.075)
+                            DG_next_location=dagger_next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.075)
         dagger_episode_index +=dg_episodes
         dagger_instances +=instances
-        # preventing inf in no-op. technically should
-        # be repeated for 0 and 1 too but nah
+        #TODO figure out a good system 
+        if True :
+            dagger_next_loc = random.randint(0, 80)
+        # preventing inf in no-op.
+        dagger_instances[0] += 1 if dagger_instances[0] == 0 else 0
+        dagger_instances[1] += 1 if dagger_instances[1] == 0 else 0
         dagger_instances[2] += 1 if dagger_instances[2] == 0 else 0
         median = np.median(dagger_instances)
         dg_weights = median/dagger_instances
         print("dagger weights : {}".format(dg_weights))
         dagger_weights = torch.Tensor(dg_weights).to(device)
+        dagger_instances[0] -= 1 if dagger_instances[0] == 1 else 0
+        dagger_instances[1] -= 1 if dagger_instances[1] == 1 else 0
         dagger_instances[2] -= 1 if dagger_instances[2] == 1 else 0
         # dagger loader
         writer.add_scalar("status", STATUS_TRAINING_DAGGER, epoch+STATUS_TRAINING_DAGGER)
