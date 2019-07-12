@@ -63,8 +63,6 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
         dagger_episode_count = 0
         # network input
         network_frames = torch.zeros(1, 3*history, 256, 256).float().to(device)
-        # record flag, when set the history buffer is filled with the first frame
-        # after it is set, all frames should be set
         for episode in range(10000):
             # dagger end
             if saved_frames >= total_frames:
@@ -95,17 +93,13 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
             client.start_episode(player_start)
             # keeping track of frames in this episode
             dagger_index = 0
+            # record flag, when set the history buffer is filled with the first frame
+            # after it is set, all frames should be set
             record = False
+            # preventing odd expert behavior
+            last_steering = 0
             for frame_index in range(1000):
                 measurements, sensor_data = client.read_data()
-                # checking whether the episode should end (i.e. car crash or fucked up stuff)
-                # measurements.player_measurements.collision_pedestrians doesn't matter. fuck pedestrians
-                if  measurements.player_measurements.collision_vehicles > 0 \
-                    or measurements.player_measurements.collision_other > 0 \
-                    or measurements.player_measurements.intersection_offroad > 0.1 \
-                    or measurements.player_measurements.autopilot_control.hand_brake \
-                    or measurements.player_measurements.autopilot_control.reverse :
-                    break
 
                 # getting expert controls
                 control = measurements.player_measurements.autopilot_control
@@ -116,7 +110,17 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                 expert[2] = control.brake
                 expert[3] = 1 if control.hand_brake else 0
                 expert[4] = 1 if control.reverse else 0
-
+                last_steering = expert[0] if frame_index==0 else 0
+                # checking whether the episode should end (i.e. car crash or fucked up stuff)
+                # measurements.player_measurements.collision_pedestrians doesn't matter. fuck pedestrians
+                if  measurements.player_measurements.collision_vehicles > 0 \
+                    or measurements.player_measurements.collision_other > 0 \
+                    or measurements.player_measurements.intersection_offroad > 0.1 \
+                    or measurements.player_measurements.autopilot_control.hand_brake \
+                    or measurements.player_measurements.autopilot_control.reverse \
+                    or np.abs(last_steering-expert[0])>0.8 :
+                    break
+                last_steering = expert[0]
                 # capturing and convering current frame
                 dagger_frame = sensor_data['RGBFront'].data
                 network_frame = np.transpose(dagger_frame, (1, 0, 2))
@@ -129,8 +133,7 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                     network_frames[0, 3:] = network_frames[0, 0:-3]
                     network_frames[0, :3] = network_frame
 
-                # getting agent predictions
-                model.net.eval()
+                # getting agent predictions                model.net.eval()
                 pred_cls, pred_reg  = model.predict(network_frames)
                 pred_cls = torch.argmax(pred_cls)
                 pred_cls = pred_cls.item()
