@@ -115,7 +115,6 @@ for epoch in range(1,args.num_epochs+1):
         optimizer.step()
         writer.add_scalar("iteration/trn_classification", loss_cls.item(), (epoch-1)*len(train_loader)+idx)
         writer.add_scalar("iteration/trn_regression", loss_reg.item(), (epoch-1)*len(train_loader)+idx)
-        break
     writer.add_scalar("training/regression", reg_loss_t/len(train_loader), epoch)
     writer.add_scalar("training/classification", cls_loss_t/len(train_loader), epoch)
     # dagger episodes ------------------------------------------------------------------------------------------------------------------------------
@@ -151,7 +150,7 @@ for epoch in range(1,args.num_epochs+1):
         writer.add_scalar("dagger/dagger_regression", reg_loss_d/args.dagger_frames, epoch)
         writer.add_scalar("dagger/dagger_classification", cls_loss_d/args.dagger_frames, epoch)
     writer.add_scalar("status", STATUS_VALIDATING, epoch+STATUS_VALIDATING)
-    print("evaluating validation set :")
+    print("evaluating")
     agent.net.eval()
     # validation episodes --------------------------------------------------------------------------------------------------------------------------
     for idx, (steer, labels, frames) in enumerate(val_loader) :
