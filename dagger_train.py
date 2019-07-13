@@ -185,7 +185,7 @@ def dagger(frames, model, device, history, weather, vehicles, pedestians, DG_nex
                                                                               weather=weather, vehicles=vehicles, pedestians=pedestians, 
                                                                               DG_next_episode=DG_next_episode, DG_threshold=DG_threshold,
                                                                               DG_next_location=DG_next_location,)
-            print('Done.')
+            print('done')
             return episode_count, skipped
         except TCPConnectionError as error:
             logging.error(error)
