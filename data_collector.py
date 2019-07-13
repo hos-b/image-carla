@@ -84,7 +84,7 @@ def run_carla_client(args, number_of_episodes=10, frames_per_episode=500, starti
             # keeping track of the frames that are actually being saved
             frame_index = 0
             # new episode, new dataset
-            dataset = hdf5_file.create_dataset("episode_{}".format(episode),shape =(1,), maxshape=(None,), chunks=(1,), compression="lzf", dtype=imitation_type)
+            dataset = hdf5_file.create_dataset("episode_{}".format(episode),shape =(0,), maxshape=(None,), chunks=(1,), compression="lzf", dtype=imitation_type)
             # execute frames
             for frame in range(0, frames_per_episode):
                 measurements, sensor_data = client.read_data()
@@ -118,7 +118,7 @@ def run_carla_client(args, number_of_episodes=10, frames_per_episode=500, starti
                     frame = sensor_data['RGBFront'].data
                     frame = np.transpose(frame, (1, 0, 2))
                     data = np.array([(frame, label)], dtype=imitation_type)
-                    dataset.resize(frame_index+2, axis=0)
+                    dataset.resize(frame_index+1, axis=0)
                     dataset[frame_index] = data
                     total_frames+=1
                 client.send_control(control)
@@ -173,7 +173,7 @@ if __name__ == '__main__':
     subprocess.Popen(['.././CarlaUE4.sh', '-carla-world-port=2005','/Game/Maps/Town02', '-benchmark', '-fps=20', '-carla-server', '-windowed', '-ResX=16', 'ResY=9'], stdout=FNULL, stderr=FNULL, env=my_env)
     print("done")
     try:
-        hdf5_file = h5py.File(os.path.join("/home/hosein/part","carla_dataset.hdf5"), "a")
+        hdf5_file = h5py.File(os.path.join("/home/bahadorm/","carla_dataset.hdf5"), "a")
         main()
         hdf5_file.close()
     except KeyboardInterrupt:
