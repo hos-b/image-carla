@@ -57,7 +57,6 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
         transform = transforms.Compose(transform_list)
         # frames trained
         saved_frames = 0
-        dagger_instances = np.zeros((3))
         skipped_frames = 0
         # keeping track of episodes
         dagger_episode_count = 0
@@ -135,7 +134,8 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                     network_frames[0, 3:] = network_frames[0, 0:-3]
                     network_frames[0, :3] = network_frame
 
-                # getting agent predictions                model.net.eval()
+                # getting agent predictions
+                model.net.eval()
                 pred_cls, pred_reg  = model.predict(network_frames)
                 pred_cls = torch.argmax(pred_cls)
                 pred_cls = pred_cls.item()
@@ -145,7 +145,7 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                 control = VehicleControl()
                 control.steer = agent[0]
                 # 30km/h speed limit
-                control.throttle = agent[1] if measurements.player_measurements.forward_speed * 3.6 <=30 else 0
+                control.throttle = agent[1] if measurements.player_measurements.forward_speed * 3.6 <=25 else 0
                 control.brake = agent[2]
                 control.hand_brake = False
                 control.reverse = False
@@ -167,7 +167,6 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                     else :
                         skipped_frames+=1
                 else :
-                    dagger_instances[action_to_label_double(expert)[0]] += 1
                     data = np.array([(dagger_frame, expert)], dtype=imitation_type)
                     dataset.resize(dagger_index+1, axis=0)
                     dataset[dagger_index] = data
@@ -177,17 +176,17 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                         break
                 print_over_same_line("dagger frame {}/{} in {} episodes; skipped {}".format(saved_frames,total_frames,dagger_episode_count,skipped_frames))
         hdf5_file.close()
-        return dagger_episode_count, dagger_instances, skipped_frames-51*dagger_episode_count
+        return dagger_episode_count, skipped_frames-51*dagger_episode_count
 
 def dagger(frames, model, device, history, weather, vehicles, pedestians, DG_next_location, DG_next_episode, DG_threshold):
     while True:
         try:
-            episode_count, instances, skipped = run_carla_train(total_frames=frames, model=model, device=device, history=history, 
+            episode_count, skipped = run_carla_train(total_frames=frames, model=model, device=device, history=history, 
                                                                               weather=weather, vehicles=vehicles, pedestians=pedestians, 
                                                                               DG_next_episode=DG_next_episode, DG_threshold=DG_threshold,
                                                                               DG_next_location=DG_next_location,)
             print('Done.')
-            return episode_count, instances, skipped
+            return episode_count, skipped
         except TCPConnectionError as error:
             logging.error(error)
             time.sleep(1)

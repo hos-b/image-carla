@@ -15,6 +15,7 @@ from carla.sensor import Camera, Lidar
 from carla.settings import CarlaSettings
 from carla.tcp import TCPConnectionError
 from carla.util import print_over_same_line
+from utils import action_to_label_double
 
 def distance_3d(pose1, pose2):
     return np.sqrt((pose1.x-pose2.x)**2 + (pose1.y-pose2.y)**2 + (pose1.z-pose2.z)**2)
@@ -37,14 +38,14 @@ def distance_3d(pose1, pose2):
 14 - SoftRainSunset
 '''
 def run_carla_client(args, number_of_episodes=10, frames_per_episode=500, starting_episode=0):
-    with make_carla_client("localhost", 2000) as client:
+    with make_carla_client("localhost", 2005) as client:
         print('carla client connected')
         # setting up data type
         imitation_type = np.dtype([('image', np.uint8, (512, 512, 3)), ('label', np.float32, 5)])
         print("datatype :\n{}".format(imitation_type))
         # total frames collected this run
         total_frames = 0
-
+        action_distribution = np.zeros((3))
         for episode in range(starting_episode, number_of_episodes):
             # flag to skip the initial frames where the car doesn't move
             record = False
@@ -57,7 +58,7 @@ def run_carla_client(args, number_of_episodes=10, frames_per_episode=500, starti
                     NumberOfVehicles=20,
                     NumberOfPedestrians=40,
                     WeatherId=1, # clear noon
-                    QualityLevel='Low') # QualityLevel=args.quality_level
+                    QualityLevel='Epic') # QualityLevel=args.quality_level
                 settings.randomize_seeds()
 
                 camera = Camera('RGBFront', PostProcessing='SceneFinal')
@@ -113,37 +114,15 @@ def run_carla_client(args, number_of_episodes=10, frames_per_episode=500, starti
                     label[3] = 1 if control.hand_brake else 0
                     label[4] = 1 if control.reverse else 0
 
+                    action_distribution[action_to_label_double(label)[0]] += 1
                     frame = sensor_data['RGBFront'].data
                     frame = np.transpose(frame, (1, 0, 2))
                     data = np.array([(frame, label)], dtype=imitation_type)
                     dataset.resize(frame_index+2, axis=0)
                     dataset[frame_index] = data
                     total_frames+=1
-
                 client.send_control(control)
-
-
-def print_measurements(measurements):
-    number_of_agents = len(measurements.non_player_agents)
-    player_measurements = measurements.player_measurements
-    message = 'Vehicle at ({pos_x:.1f}, {pos_y:.1f}), '
-    message += '{speed:.0f} km/h, '
-    message += 'Collision: {{vehicles={col_cars:.0f}, pedestrians={col_ped:.0f}, other={col_other:.0f}}}, '
-    message += '{other_lane:.0f}% other lane, {offroad:.0f}% off-road, '
-    message += '({agents_num:d} non-player agents in the scene)'
-    message = message.format(
-        pos_x=player_measurements.transform.location.x,
-        pos_y=player_measurements.transform.location.y,
-        speed=player_measurements.forward_speed * 3.6, # m/s -> km/h
-        col_cars=player_measurements.collision_vehicles,
-        col_ped=player_measurements.collision_pedestrians,
-        col_other=player_measurements.collision_other,
-        other_lane=100 * player_measurements.intersection_otherlane,
-        offroad=100 * player_measurements.intersection_offroad,
-        agents_num=number_of_agents)
-    print_over_same_line(message)
-
-
+        print(action_distribution)
 def main():
     argparser = argparse.ArgumentParser(description=__doc__)
     argparser.add_argument(
@@ -191,7 +170,7 @@ if __name__ == '__main__':
     my_env = os.environ.copy()
     my_env["SDL_VIDEODRIVER"] = "offscreen"
     FNULL = open(os.devnull, 'w')
-    subprocess.Popen(['.././CarlaUE4.sh', '/Game/Maps/Town02', '-benchmark', '-fps=20', '-carla-server', '-windowed', '-ResX=16', 'ResY=9'], stdout=FNULL, stderr=FNULL, env=my_env)
+    subprocess.Popen(['.././CarlaUE4.sh', '-carla-world-port=2005','/Game/Maps/Town02', '-benchmark', '-fps=20', '-carla-server', '-windowed', '-ResX=16', 'ResY=9'], stdout=FNULL, stderr=FNULL, env=my_env)
     print("done")
     try:
         hdf5_file = h5py.File(os.path.join("/home/hosein/part","carla_dataset.hdf5"), "a")

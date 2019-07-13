@@ -83,15 +83,13 @@ print("training ...")
 lowest_loss = 20
 # dagger init
 dagger_episode_index = 0
-dagger_weights = torch.Tensor([1, 1, 1])
-dagger_instances = np.zeros((3))
 dagger_next_loc = 22
+dagger_loss = torch.nn.CrossEntropyLoss().to(device)
 # learned loss weights
 l2_weight = torch.nn.Parameter(torch.Tensor([-2.0]).to(device))
 ce_weight = torch.nn.Parameter(torch.Tensor([0]).to(device))
 optimizer.add_param_group({"params": ce_weight})
 optimizer.add_param_group({"params": l2_weight})
-
 # start training
 print("removing old dagger dataset")
 os.system("rm -f /tmp/dagger_dataset.hdf5")
@@ -117,33 +115,21 @@ for epoch in range(1,args.num_epochs+1):
         optimizer.step()
         writer.add_scalar("iteration/trn_classification", loss_cls.item(), (epoch-1)*len(train_loader)+idx)
         writer.add_scalar("iteration/trn_regression", loss_reg.item(), (epoch-1)*len(train_loader)+idx)
+        break
     writer.add_scalar("training/regression", reg_loss_t/len(train_loader), epoch)
     writer.add_scalar("training/classification", cls_loss_t/len(train_loader), epoch)
     # dagger episodes ------------------------------------------------------------------------------------------------------------------------------
     if args.dagger:
         writer.add_scalar("status", STATUS_RECORDING_DAGGER, epoch+STATUS_RECORDING_DAGGER)
-        dg_episodes, instances, skipped_frames = dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, vehicles=30, pedestians=30, 
-                            DG_next_location=dagger_next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.075)
+        dg_episodes, skipped_frames = dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1,
+                                vehicles=30, pedestians=30, DG_next_location=dagger_next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.075)
         dagger_episode_index +=dg_episodes
-        dagger_instances +=instances
         #TODO figure out a good system 
         if True :
             dagger_next_loc = random.randint(0, 80)
-        # preventing inf in no-op.
-        dagger_instances[0] += 1 if dagger_instances[0] == 0 else 0
-        dagger_instances[1] += 1 if dagger_instances[1] == 0 else 0
-        dagger_instances[2] += 1 if dagger_instances[2] == 0 else 0
-        median = np.median(dagger_instances)
-        dg_weights = median/dagger_instances
-        print("dagger weights : {}".format(dg_weights))
-        dagger_weights = torch.Tensor(dg_weights).to(device)
-        dagger_instances[0] -= 1 if dagger_instances[0] == 1 else 0
-        dagger_instances[1] -= 1 if dagger_instances[1] == 1 else 0
-        dagger_instances[2] -= 1 if dagger_instances[2] == 1 else 0
         # dagger loader
         writer.add_scalar("status", STATUS_TRAINING_DAGGER, epoch+STATUS_TRAINING_DAGGER)
         daggr_loader = get_data_loader(batch_size=args.batch_size, train=True, history=args.history, dagger=True)
-        dagger_loss = torch.nn.CrossEntropyLoss(weight=dagger_weights).to(device)
         agent.net.train()
         for idx, (steer, labels, frames) in enumerate(daggr_loader) :
             print_over_same_line("dagger batch {}/{}".format(idx, len(daggr_loader)))
@@ -164,15 +150,15 @@ for epoch in range(1,args.num_epochs+1):
         writer.add_scalar("dagger/dagger_skipped_frames", skipped_frames, epoch)
         writer.add_scalar("dagger/dagger_regression", reg_loss_d/args.dagger_frames, epoch)
         writer.add_scalar("dagger/dagger_classification", cls_loss_d/args.dagger_frames, epoch)
-
     writer.add_scalar("status", STATUS_VALIDATING, epoch+STATUS_VALIDATING)
+    print("evaluating validation set :")
+    agent.net.eval()
     # validation episodes --------------------------------------------------------------------------------------------------------------------------
     for idx, (steer, labels, frames) in enumerate(val_loader) :
         print_over_same_line("validation batch {}/{}".format(idx, len(val_loader)))
         labels = labels.to(device)
         frames = frames.to(device)
         steer = steer.to(device)
-        agent.net.eval()
         pred_cls, pred_reg  = agent.predict(frames)
         loss_cls = classification_loss(pred_cls, labels.squeeze(1))
         loss_reg = regression_loss(pred_reg, steer)
@@ -200,7 +186,7 @@ for epoch in range(1,args.num_epochs+1):
         save_path = os.path.join(snapshot_dir,args.name)
         torch.save(optimizer.state_dict(), save_path+"_optimizer")
         if current_val_loss < lowest_loss or epoch%2==0 or average_fault<0.1:
-            if current_val_loss < lowest_loss:
+            if current_val_loss < lowest_loss
                 lowest_loss = current_val_loss
             agent.save(save_path+"_model_{}".format(epoch))
             print("saved snapshot at epoch {}".format(epoch))            
