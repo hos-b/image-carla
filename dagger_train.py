@@ -113,14 +113,14 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                 last_steering = expert[0] if frame_index==0 else 0
                 # checking whether the episode should end (i.e. car crash or fucked up stuff)
                 # measurements.player_measurements.collision_pedestrians doesn't matter. fuck pedestrians
-                if  measurements.player_measurements.collision_vehicles > 0 \
-                    or measurements.player_measurements.collision_other > 0 \
-                    or measurements.player_measurements.intersection_offroad > 0.15 \
-                    or measurements.player_measurements.intersection_otherlane > 0.15 \
-                    or measurements.player_measurements.autopilot_control.hand_brake \
-                    or measurements.player_measurements.autopilot_control.reverse \
-                    or np.abs(last_steering-expert[0])>0.8 \
-                    or np.abs(expert[0])==1:
+                if  measurements.player_measurements.collision_vehicles > 0 or \
+                    measurements.player_measurements.collision_other > 0 or \
+                    measurements.player_measurements.intersection_offroad > 0.15 or \
+                    measurements.player_measurements.intersection_otherlane > 0.15 or \
+                    measurements.player_measurements.autopilot_control.hand_brake or \
+                    measurements.player_measurements.autopilot_control.reverse or \
+                    np.abs(last_steering-expert[0])>0.8 or \
+                    np.abs(expert[0])==1:
                     break
                 last_steering = expert[0]
                 # capturing and convering current frame
