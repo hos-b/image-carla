@@ -67,11 +67,11 @@ if(args.continute_training):
     print("continue flag set")
     try:
         load_path = os.path.join(snapshot_dir,args.name)
-        agent.net.load_state_dict(torch.load(load_path+"_model"))
+        agent.net.load_state_dict(torch.load(load_path +"_model_{}".format(args.start_epoch-1)))
         optimizer.load_state_dict(torch.load(load_path+"_optimizer"))
     except FileNotFoundError:
         print("snapshot file(s) not found")
-# starting tensorboard and carla in server mode -------------------- -------------------------------------------------------------------------------
+# starting tensorboard and carla in server mode ----------------------------------------------------------------------------------------------------
 print("starting tensorboard")
 writer = SummaryWriter(os.path.join(tensorboard_dir,args.name))
 print("starting carla in server mode\n...")
