@@ -20,6 +20,8 @@ STATUS_TRAINING_DAGGER = 2
 STATUS_VALIDATING = 3
 STATUS_SIMULATING = 4
 
+# latest counts : [44556. 25988.     0.]
+# latest weights: [0.5832660023341413,  1, 0.1]
 snapshot_dir = "./snaps"
 tensorboard_dir="./tensorboard"
 # train.py --weighted --snap -history=3 -bsize=8 -lr=5e-4 -name=july2_h3w -val_episodes=10 -val_frames=300
@@ -55,7 +57,7 @@ device = torch.device('cuda')
 agent = CBCAgent(device=device, history=args.history, name='efficient-double-large')
 class_weights = torch.Tensor([1, 1, 1])
 if args.weighted:
-    class_weights = torch.Tensor([  1.        ,   0.99284543, 319.17272727]).to(device)
+    class_weights = torch.Tensor([0.5832660023341413,  1, 0.1]).to(device)
 classification_loss = torch.nn.CrossEntropyLoss(weight=class_weights).to(device)
 regression_loss = torch.nn.MSELoss(reduction='sum')
 optimizer = optim.Adam(agent.net.parameters(), lr=args.learning_rate)
@@ -101,7 +103,7 @@ for epoch in range(1,args.num_epochs+1):
     agent.net.train()
     # training episodes ----------------------------------------------------------------------------------------------------------------------------
     for idx, (steer, labels, frames) in enumerate(train_loader) :
-        print_over_same_line("training batch {}/{}".format(idx, len(train_loader)))
+        print_over_same_line("training batch {}/{}".format(idx+1, len(train_loader)))
         labels = labels.to(device)
         frames = frames.to(device)
         steer = steer.to(device)
@@ -131,7 +133,7 @@ for epoch in range(1,args.num_epochs+1):
         daggr_loader = get_data_loader(batch_size=args.batch_size, train=True, history=args.history, dagger=True)
         agent.net.train()
         for idx, (steer, labels, frames) in enumerate(daggr_loader) :
-            print_over_same_line("dagger batch {}/{}".format(idx, len(daggr_loader)))
+            print_over_same_line("dagger batch {}/{}".format(idx+1, len(daggr_loader)))
             labels = labels.to(device)
             frames = frames.to(device)
             steer = steer.to(device)
@@ -154,7 +156,7 @@ for epoch in range(1,args.num_epochs+1):
     agent.net.eval()
     # validation episodes --------------------------------------------------------------------------------------------------------------------------
     for idx, (steer, labels, frames) in enumerate(val_loader) :
-        print_over_same_line("validation batch {}/{}".format(idx, len(val_loader)))
+        print_over_same_line("validation batch {}/{}".format(idx+1, len(val_loader)))
         labels = labels.to(device)
         frames = frames.to(device)
         steer = steer.to(device)

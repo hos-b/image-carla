@@ -173,7 +173,7 @@ if __name__ == "__main__":
     device = torch.device('cpu')
     agent = CBCAgent(device=device, history=3, name='efficient-double-large')
     
-    model_name = "dnet_h3w_14th_model_22"
+    model_name = "dnet_h3w_14th_model_24"
     agent.net.load_state_dict(torch.load("snaps/{}".format(model_name)))
     acv, acp, aco, aiol, aior = evaluate_model(10,800,agent,device,3,True,1,30,60)
     #carl.close()

@@ -74,7 +74,7 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                 NumberOfVehicles=vehicles,
                 NumberOfPedestrians=pedestians,
                 WeatherId=weather, 
-                QualityLevel='Low') # QualityLevel=args.quality_level
+                QualityLevel='Epic') # QualityLevel=args.quality_level
             settings.randomize_seeds()
 
             camera = Camera('RGBFront', PostProcessing='SceneFinal')

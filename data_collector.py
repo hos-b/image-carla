@@ -173,7 +173,7 @@ if __name__ == '__main__':
     subprocess.Popen(['.././CarlaUE4.sh', '-carla-world-port=2005','/Game/Maps/Town02', '-benchmark', '-fps=20', '-carla-server', '-windowed', '-ResX=16', 'ResY=9'], stdout=FNULL, stderr=FNULL, env=my_env)
     print("done")
     try:
-        hdf5_file = h5py.File(os.path.join("/home/bahadorm/","carla_dataset.hdf5"), "a")
+        hdf5_file = h5py.File(os.path.join("/home/hosein/part","carla_dataset.hdf5"), "a")
         main()
         hdf5_file.close()
     except KeyboardInterrupt:
