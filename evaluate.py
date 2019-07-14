@@ -67,7 +67,7 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
                 NumberOfVehicles=vehicles,
                 NumberOfPedestrians=pedestians,
                 WeatherId=weather, 
-                QualityLevel='Low') # QualityLevel=args.quality_level
+                QualityLevel='Epic') # QualityLevel=args.quality_level
             settings.randomize_seeds()
 
             camera = Camera('RGBFront', PostProcessing='SceneFinal')
@@ -150,53 +150,36 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
             
         return avg_collision_vehicle, avg_collision_pedestrian, avg_collision_other, avg_intersection_otherlane, avg_intersection_offroad
 
-
-def print_measurements(measurements):
-    number_of_agents = len(measurements.non_player_agents)
-    player_measurements = measurements.player_measurements
-    message = 'Vehicle at ({pos_x:.1f}, {pos_y:.1f}), '
-    message += '{speed:.0f} km/h, '
-    message += 'Collision: {{vehicles={col_cars:.0f}, pedestrians={col_ped:.0f}, other={col_other:.0f}}}, '
-    message += '{other_lane:.0f}% other lane, {offroad:.0f}% off-road, '
-    message += '({agents_num:d} non-player agents in the scene)'
-    message = message.format(
-        pos_x=player_measurements.transform.location.x,
-        pos_y=player_measurements.transform.location.y,
-        speed=player_measurements.forward_speed * 3.6, # m/s -> km/h
-        col_cars=player_measurements.collision_vehicles,
-        col_ped=player_measurements.collision_pedestrians,
-        col_other=player_measurements.collision_other,
-        other_lane=100 * player_measurements.intersection_otherlane,
-        offroad=100 * player_measurements.intersection_offroad,
-        agents_num=number_of_agents)
-    print_over_same_line(message)
-
 def evaluate_model(episodes, frames, model, device, history, save_images, weather, vehicles, pedestians):
     while True:
         try:
             acv, acp, aco, aiol, aior = run_carla_eval(number_of_episodes=episodes, frames_per_episode=frames, model=model, device=device, history=history,
                                                        save_images=save_images, weather=weather, vehicles=vehicles, pedestians=pedestians)
-            print('Done.')
+            print('done')
             return acv, acp, aco, aiol, aior
         except TCPConnectionError as error:
             logging.error(error)
             time.sleep(1)
 
 if __name__ == "__main__":
+    
     print("starting carla in server mode")
     my_env = os.environ.copy()
     my_env["SDL_VIDEODRIVER"] = "offscreen"
     FNULL = open(os.devnull, 'w')
-    subprocess.Popen(['.././CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '-ResX=16', 'ResY=9'],stdout=FNULL, stderr=FNULL, env=my_env)
+    carl = subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '-ResX=320', 'ResY=240'],stdout=FNULL, stderr=FNULL, env=my_env)
     print("done")
 
     device = torch.device('cpu')
-    agent = CBCAgent(device=device, history=3, name='efficient-double')
-    model_name = "doublenet_h3w_newerdag_b0_model_10"
+    agent = CBCAgent(device=device, history=3, name='efficient-double-large')
+    
+    model_name = "dnet_h3w_14th_model_22"
     agent.net.load_state_dict(torch.load("snaps/{}".format(model_name)))
-    acv, acp, aco, aiol, aior = evaluate_model(10,400,agent,device,3,True,1,30,30)
+    acv, acp, aco, aiol, aior = evaluate_model(10,800,agent,device,3,True,1,30,60)
+    #carl.close()
     os.system("mkdir data/{}".format(model_name))
     os.system("cp snaps/{} data/{}".format(model_name, model_name))
+    
     for i in range(10):
         os.system("ffmpeg -r 20 -i data/RGBFront_e{:02d}_f%03d.png -b 500000  data/{}/episode_{}.mp4".format(i,model_name,i))
     os.system("rm -f data/*.png")
@@ -206,4 +189,3 @@ if __name__ == "__main__":
     print("avg collision other {}".format(sum(aco)/len(aco)))
     print("avg intersection otherlane {}".format(sum(aiol)/len(aiol)))
     print("avg intersection offroad {}".format(sum(aior)/len(aior)))
-                                
