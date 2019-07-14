@@ -28,6 +28,7 @@ tensorboard_dir="./tensorboard"
 # arg parse ----------------------------------------------------------------------------------------------------------------------------------------
 parser = argparse.ArgumentParser()
 parser.add_argument('--cont', '-c', action = "store_true", dest="continute_training", default = False, help ='continue training')
+parser.add_argument('-se', type=int, dest="start_epoch", default=1, help='continue from epoch x')
 parser.add_argument('--snap', '-s', action = "store_true", dest="save_snaps", default = True, help='save snapshots every 5 epochs')
 parser.add_argument('-name', type=str, dest="name", default="debug", help='name of the run')
 parser.add_argument('-lr', type=float, dest="learning_rate", default=5e-4, help='learning rate')
@@ -95,7 +96,7 @@ optimizer.add_param_group({"params": l2_weight})
 # start training
 print("removing old dagger dataset")
 os.system("rm -f /tmp/dagger_dataset.hdf5")
-for epoch in range(1,args.num_epochs+1):    
+for epoch in range(args.start_epoch, args.num_epochs+1):    
     print("epoch {}/{}".format(epoch,args.num_epochs))
     reg_loss_t = reg_loss_v = reg_loss_d = 0
     cls_loss_t = cls_loss_v = cls_loss_d = 0
