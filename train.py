@@ -85,7 +85,7 @@ print("training ...")
 lowest_loss = 20
 # dagger init
 dagger_episode_index = 0
-dagger_next_loc = 22
+dagger_next_loc = 0
 dagger_loss = torch.nn.CrossEntropyLoss().to(device)
 # learned loss weights
 l2_weight = torch.nn.Parameter(torch.Tensor([-2.0]).to(device))
@@ -126,8 +126,7 @@ for epoch in range(1,args.num_epochs+1):
                                 vehicles=30, pedestians=30, DG_next_location=dagger_next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.075)
         dagger_episode_index +=dg_episodes
         #TODO figure out a good system 
-        if True :
-            dagger_next_loc = random.randint(0, 80)
+        dagger_next_loc = (dagger_next_loc+random.randint(1, 4))%80
         # dagger loader
         writer.add_scalar("status", STATUS_TRAINING_DAGGER, epoch+STATUS_TRAINING_DAGGER)
         daggr_loader = get_data_loader(batch_size=args.batch_size, train=True, history=args.history, dagger=True)

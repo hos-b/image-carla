@@ -109,7 +109,8 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
                 expert[2] = control.brake
                 expert[3] = 1 if control.hand_brake else 0
                 expert[4] = 1 if control.reverse else 0
-                last_steering = expert[0] if frame_index==0 else 0
+                if frame_index==0 :
+                    last_steering = expert[0]
                 # checking whether the episode should end (i.e. car crash or fucked up stuff)
                 # measurements.player_measurements.collision_pedestrians doesn't matter. fuck pedestrians
                 if  measurements.player_measurements.collision_vehicles > 0 or \
