@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 import shutil
-
+import torch
 
 def print_over_same_line(text):
     terminal_width = shutil.get_terminal_size((80, 20)).columns
