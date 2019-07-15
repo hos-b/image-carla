@@ -12,6 +12,7 @@ from agent.cagent import CBCAgent
 from utils import print_over_same_line
 from evaluate import evaluate_model
 from dagger_train import dagger
+from utils import batch_accuracy
 import random
 
 STATUS_TRAINING = 0
@@ -100,6 +101,9 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
     print("epoch {}/{}".format(epoch,args.num_epochs))
     reg_loss_t = reg_loss_v = reg_loss_d = 0
     cls_loss_t = cls_loss_v = cls_loss_d = 0
+    training_accuracy_cls = training_accuracy_reg = 0
+    validation_accuracy_cls = validation_accuracy_reg = 0
+    dagger_accuracy_cls = dagger_accuracy_reg = 0
     writer.add_scalar("status", STATUS_TRAINING, epoch+STATUS_TRAINING)
     agent.net.train()
     # training episodes ----------------------------------------------------------------------------------------------------------------------------
@@ -116,10 +120,17 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
         reg_loss_t += loss_reg.item()
         cls_loss_t += loss_cls.item()
         optimizer.step()
+        cls_accuracy, reg_accuracy = batch_accuracy(pred_cls,pred_reg,labels.squeeze(1),steer)
+        training_accuracy_cls +=cls_accuracy
+        training_accuracy_reg +=reg_accuracy
         writer.add_scalar("iteration/trn_classification", loss_cls.item(), (epoch-1)*len(train_loader)+idx)
         writer.add_scalar("iteration/trn_regression", loss_reg.item(), (epoch-1)*len(train_loader)+idx)
+    training_accuracy_cls /= len(train_loader)
+    training_accuracy_reg /= len(train_loader)
     writer.add_scalar("training/regression", reg_loss_t/len(train_loader), epoch)
     writer.add_scalar("training/classification", cls_loss_t/len(train_loader), epoch)
+    writer.add_scalar("training/cls_accuracy", training_accuracy_cls, epoch)
+    writer.add_scalar("training/reg_accuracy", training_accuracy_reg, epoch)
     # dagger episodes ------------------------------------------------------------------------------------------------------------------------------
     if args.dagger:
         writer.add_scalar("status", STATUS_RECORDING_DAGGER, epoch+STATUS_RECORDING_DAGGER)
@@ -145,12 +156,19 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
             reg_loss_d += loss_reg.item()
             cls_loss_d += loss_cls.item()
             optimizer.step()
+            cls_accuracy, reg_accuracy = batch_accuracy(pred_cls,pred_reg,labels.squeeze(1),steer)
+            dagger_accuracy_cls +=cls_accuracy
+            dagger_accuracy_reg +=reg_accuracy
             writer.add_scalar("iteration/dgr_classification", loss_cls.item(), (epoch-1)*len(daggr_loader)+idx)
             writer.add_scalar("iteration/dgr_regression", loss_reg.item(), (epoch-1)*len(daggr_loader)+idx)
+        dagger_accuracy_cls /= len(daggr_loader)
+        dagger_accuracy_reg /= len(daggr_loader)
         writer.add_scalar("dagger/dagger_episode_count", dg_episodes, epoch)
         writer.add_scalar("dagger/dagger_skipped_frames", skipped_frames, epoch)
         writer.add_scalar("dagger/dagger_regression", reg_loss_d/args.dagger_frames, epoch)
         writer.add_scalar("dagger/dagger_classification", cls_loss_d/args.dagger_frames, epoch)
+        writer.add_scalar("dagger/cls_accuracy", dagger_accuracy_cls, epoch)
+        writer.add_scalar("dagger/reg_accuracy", dagger_accuracy_reg, epoch)
     writer.add_scalar("status", STATUS_VALIDATING, epoch+STATUS_VALIDATING)
     print("evaluating")
     agent.net.eval()
@@ -165,11 +183,18 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
         loss_reg = regression_loss(pred_reg, steer)
         reg_loss_v += loss_reg.item()
         cls_loss_v += loss_cls.item()
+        cls_accuracy, reg_accuracy = batch_accuracy(pred_cls,pred_reg,labels.squeeze(1),steer)
+        validation_accuracy_cls +=cls_accuracy
+        validation_accuracy_reg +=reg_accuracy
+    validation_accuracy_cls /= len(val_loader)
+    validation_accuracy_reg /= len(val_loader)
     # saving current val loss as a shitty way of saving 'good' models
     current_val_loss = (reg_loss_v + cls_loss_v)/len(val_loader) + (reg_loss_d + cls_loss_d)/len(daggr_loader) 
     writer.add_scalar("validation/regression", reg_loss_v/len(val_loader), epoch)
     writer.add_scalar("validation/classification", cls_loss_v/len(val_loader), epoch)
-    
+    writer.add_scalar("validation/cls_accuracy", validation_accuracy_cls, epoch)
+    writer.add_scalar("validation/reg_accuracy", validation_accuracy_reg, epoch)
+
     writer.add_scalar("status", STATUS_SIMULATING, epoch+STATUS_SIMULATING)
     writer.add_scalar("training/l2_weight", torch.exp(-l2_weight).item(), epoch)
     writer.add_scalar("training/ce_weight", torch.exp(-ce_weight).item(), epoch)
