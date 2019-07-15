@@ -70,13 +70,9 @@ def compare_controls(expert, agent, threshold) :
 
 @torch.no_grad()
 def batch_accuracy(agent_cls, agent_reg, expert_cls, expert_reg):
-    print(agent_cls.shape)
-    print(agent_reg.shape)
-    print(expert_cls.shape)
-    print(expert_reg.shape)
     batch_size = agent_cls.shape[0]
     pred_cls = torch.argmax(agent_cls, dim=1).detach()
-    hits = (torch.sum(torch.eq(pred_cls,agent_cls))).item()
+    hits = (torch.sum(torch.eq(pred_cls,expert_cls))).item()
     cls_accuracy = hits/batch_size
 
     pred_reg = agent_reg.clone().detach() 
