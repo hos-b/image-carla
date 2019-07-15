@@ -96,7 +96,7 @@ optimizer.add_param_group({"params": l2_weight})
 # start training
 print("removing old dagger dataset")
 os.system("rm -f /tmp/dagger_dataset.hdf5")
-for epoch in range(args.start_epoch, args.num_epochs+1):    
+for epoch in range(args.start_epoch, args.num_epochs+1):   
     print("epoch {}/{}".format(epoch,args.num_epochs))
     reg_loss_t = reg_loss_v = reg_loss_d = 0
     cls_loss_t = cls_loss_v = cls_loss_d = 0
