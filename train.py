@@ -54,7 +54,7 @@ print("dagger : {} \t\t dagger frames : {}".format(args.dagger,args.dagger_frame
 train_loader = get_data_loader(batch_size=args.batch_size, train=True, history=args.history, validation_episodes=10)
 val_loader   = get_data_loader(batch_size=args.batch_size, train=False, history=args.history, validation_episodes=10)
 # setting up training device, agent, optimizer, weights --------------------------------------------------------------------------------------------
-print("initializing agent, cuda, loss, optim")
+print("initializing agent, cuda, loss, optimizer")
 device = torch.device('cuda')
 agent = CBCAgent(device=device, history=args.history, name='efficient-double-large')
 class_weights = torch.Tensor([1, 1, 1])
@@ -62,7 +62,12 @@ if args.weighted:
     class_weights = torch.Tensor([0.5832660023341413,  1, 0.1]).to(device)
 classification_loss = torch.nn.CrossEntropyLoss(weight=class_weights).to(device)
 regression_loss = torch.nn.MSELoss(reduction='sum')
+# setting up optimizer + special parameters
 optimizer = optim.Adam(agent.net.parameters(), lr=args.learning_rate)
+l2_weight = torch.nn.Parameter(torch.Tensor([-2.0]).to(device))
+ce_weight = torch.nn.Parameter(torch.Tensor([0]).to(device))
+optimizer.add_param_group({"params": ce_weight})
+optimizer.add_param_group({"params": l2_weight})
 # if flag --cont is set, continute training from a previous snapshot -------------------------------------------------------------------------------
 if(args.continute_training):
     print("continue flag set")
@@ -89,11 +94,6 @@ lowest_loss = 20
 dagger_episode_index = 0
 dagger_next_loc = 0
 dagger_loss = torch.nn.CrossEntropyLoss().to(device)
-# learned loss weights
-l2_weight = torch.nn.Parameter(torch.Tensor([-2.0]).to(device))
-ce_weight = torch.nn.Parameter(torch.Tensor([0]).to(device))
-optimizer.add_param_group({"params": ce_weight})
-optimizer.add_param_group({"params": l2_weight})
 # start training
 print("removing old dagger dataset")
 os.system("rm -f /tmp/dagger_dataset.hdf5")
