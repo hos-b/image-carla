@@ -72,12 +72,11 @@ def compare_controls(expert, agent, threshold) :
 def batch_accuracy(agent_cls, agent_reg, expert_cls, expert_reg):
     batch_size = agent_cls.shape[0]
     pred_cls = torch.argmax(agent_cls, dim=1).detach()
-    hits = (torch.sum(torch.eq(pred_cls,expert_cls))).item()
-    cls_accuracy = hits/batch_size
+    cls_accuracy= torch.mean((pred_cls==expert_cls).float()).item()
 
-    pred_reg = agent_reg.clone().detach() 
-    reg_accuracy = -(1/4)*(torch.pow((pred_reg-expert_reg),2)) + 1
-    reg_accuracy = torch.sum(reg_accuracy).item()
-    reg_accuracy = reg_accuracy/batch_size
+    pred_reg = agent_reg.clone().detach()
+    reg_accuracy = torch.abs(0.5*(pred_reg-expert_reg))
+    reg_accuracy = -torch.pow(reg_accuracy,0.2) + 1
+    reg_accuracy = torch.mean(reg_accuracy).item()
 
     return cls_accuracy, reg_accuracy
