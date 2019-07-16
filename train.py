@@ -87,7 +87,7 @@ my_env = os.environ.copy()
 my_env["DISPLAY"] = ""
 FNULL = open(os.devnull, 'w')
 subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '/Game/Maps/Town02', '-opengl'
-                 '-ResX=16', '-ResY=9','-world-port='.format(args.carla_port)], stdout=FNULL, stderr=FNULL, env=my_env)
+                 '-ResX=16', '-ResY=9','-world-port={}'.format(args.carla_port)], stdout=FNULL, stderr=FNULL, env=my_env)
 print("done")
 print("training ...")
 # lowest loss : save  best snapshots of the network
@@ -128,6 +128,7 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
         training_accuracy_reg +=reg_accuracy
         writer.add_scalar("iteration/trn_classification", loss_cls.item(), (epoch-1)*len(train_loader)+idx)
         writer.add_scalar("iteration/trn_regression", loss_reg.item(), (epoch-1)*len(train_loader)+idx)
+        break
     training_accuracy_cls /= len(train_loader)
     training_accuracy_reg /= len(train_loader)
     writer.add_scalar("training/regression", reg_loss_t/len(train_loader), epoch)
@@ -189,6 +190,7 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
         cls_accuracy, reg_accuracy = batch_accuracy(pred_cls,pred_reg,labels.squeeze(1),steer)
         validation_accuracy_cls +=cls_accuracy
         validation_accuracy_reg +=reg_accuracy
+        break
     validation_accuracy_cls /= len(val_loader)
     validation_accuracy_reg /= len(val_loader)
     # saving current val loss as a shitty way of saving 'good' models
