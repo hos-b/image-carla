@@ -87,7 +87,7 @@ my_env = os.environ.copy()
 my_env["DISPLAY"] = ""
 FNULL = open(os.devnull, 'w')
 subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '/Game/Maps/Town02', '-opengl'
-                 '-ResX=16', '-ResY=9',"-carla-world-port=".format(args.carla_port)], stdout=FNULL, stderr=FNULL, env=my_env)
+                 '-ResX=16', '-ResY=9','-world-port='.format(args.carla_port)], stdout=FNULL, stderr=FNULL, env=my_env)
 print("done")
 print("training ...")
 # lowest loss : save  best snapshots of the network
