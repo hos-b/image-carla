@@ -41,7 +41,7 @@ def distance_3d(pose1, pose2):
 14 - SoftRainSunset
 '''
 def run_carla_eval(number_of_episodes, frames_per_episode, model, device, history, save_images, weather, vehicles, pedestians, carla_port) :
-    with make_carla_client("localhost", 2000) as client:
+    with make_carla_client("localhost", carla_port) as client:
         print('carla client connected')
         # setting up transform
         transform_list = []

@@ -84,9 +84,9 @@ print("starting tensorboard")
 writer = SummaryWriter(os.path.join(tensorboard_dir,args.name))
 print("starting carla in server mode\n...")
 my_env = os.environ.copy()
-my_env["SDL_VIDEODRIVER"] = "offscreen"
+my_env["DISPLAY"] = ""
 FNULL = open(os.devnull, 'w')
-subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '/Game/Maps/Town02',
+subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '/Game/Maps/Town02', '-opengl'
                  '-ResX=16', '-ResY=9',"-carla-world-port=".format(args.carla_port)], stdout=FNULL, stderr=FNULL, env=my_env)
 print("done")
 print("training ...")
@@ -194,7 +194,7 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
     # saving current val loss as a shitty way of saving 'good' models
     current_val_loss = (reg_loss_v + cls_loss_v)/len(val_loader)
     if args.dagger :
-        current_val_loss += + (reg_loss_d + cls_loss_d)/len(daggr_loader) 
+        current_val_loss += (reg_loss_d + cls_loss_d)/len(daggr_loader) 
     writer.add_scalar("validation/regression", reg_loss_v/len(val_loader), epoch)
     writer.add_scalar("validation/classification", cls_loss_v/len(val_loader), epoch)
     writer.add_scalar("validation/cls_accuracy", validation_accuracy_cls, epoch)
