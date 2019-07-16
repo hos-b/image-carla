@@ -21,11 +21,11 @@ STATUS_TRAINING_DAGGER = 2
 STATUS_VALIDATING = 3
 STATUS_SIMULATING = 4
 
+# CUDA_VISIBLE_DEVICES=0 python3 train.py --snap -name=dnet_h3w_16th_HD -bsize=32 -val_episodes=10 -val_frames=500 -history=3 --weighted --dagger -dagger_frames=1600 -carla_port=200
 # latest counts : [44556. 25988.     0.]
 # latest weights: [0.5832660023341413,  1, 0.1]
 snapshot_dir = "./snaps"
 tensorboard_dir="./tensorboard"
-# train.py --weighted --snap -history=3 -bsize=8 -lr=5e-4 -name=july2_h3w -val_episodes=10 -val_frames=300
 # arg parse ----------------------------------------------------------------------------------------------------------------------------------------
 parser = argparse.ArgumentParser()
 parser.add_argument('--cont', '-c', action = "store_true", dest="continute_training", default = False, help ='continue training')
@@ -89,7 +89,6 @@ FNULL = open(os.devnull, 'w')
 subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '/Game/Maps/Town02',
                  '-ResX=16', '-ResY=9',"-carla-world-port=".format(args.carla_port)], stdout=FNULL, stderr=FNULL, env=my_env)
 print("done")
-#train.py --snap -name=dnet_h3w_svdag -bsize=16 -val_episodes=10 -val_frames=400 -history=3 --weighted --dagger -dagger_frames=150
 print("training ...")
 # lowest loss : save  best snapshots of the network
 lowest_loss = 20
@@ -193,7 +192,9 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
     validation_accuracy_cls /= len(val_loader)
     validation_accuracy_reg /= len(val_loader)
     # saving current val loss as a shitty way of saving 'good' models
-    current_val_loss = (reg_loss_v + cls_loss_v)/len(val_loader) + (reg_loss_d + cls_loss_d)/len(daggr_loader) 
+    current_val_loss = (reg_loss_v + cls_loss_v)/len(val_loader)
+    if args.dagger :
+        current_val_loss += + (reg_loss_d + cls_loss_d)/len(daggr_loader) 
     writer.add_scalar("validation/regression", reg_loss_v/len(val_loader), epoch)
     writer.add_scalar("validation/classification", cls_loss_v/len(val_loader), epoch)
     writer.add_scalar("validation/cls_accuracy", validation_accuracy_cls, epoch)
