@@ -40,7 +40,7 @@ def distance_3d(pose1, pose2):
 13 - HardRainSunset
 14 - SoftRainSunset
 '''
-def run_carla_eval(number_of_episodes, frames_per_episode, model, device, history, save_images, weather, vehicles, pedestians) :
+def run_carla_eval(number_of_episodes, frames_per_episode, model, device, history, save_images, weather, vehicles, pedestians, carla_port) :
     with make_carla_client("localhost", 2000) as client:
         print('carla client connected')
         # setting up transform
@@ -150,11 +150,11 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
             
         return avg_collision_vehicle, avg_collision_pedestrian, avg_collision_other, avg_intersection_otherlane, avg_intersection_offroad
 
-def evaluate_model(episodes, frames, model, device, history, save_images, weather, vehicles, pedestians):
+def evaluate_model(episodes, frames, model, device, history, save_images, weather, vehicles, pedestians,carla_port):
     while True:
         try:
             acv, acp, aco, aiol, aior = run_carla_eval(number_of_episodes=episodes, frames_per_episode=frames, model=model, device=device, history=history,
-                                                       save_images=save_images, weather=weather, vehicles=vehicles, pedestians=pedestians)
+                                                       save_images=save_images, weather=weather, vehicles=vehicles, pedestians=pedestians,carla_port=carla_port)
             print('done')
             return acv, acp, aco, aiol, aior
         except TCPConnectionError as error:
@@ -167,7 +167,8 @@ if __name__ == "__main__":
     my_env = os.environ.copy()
     my_env["SDL_VIDEODRIVER"] = "offscreen"
     FNULL = open(os.devnull, 'w')
-    carl = subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '-ResX=320', 'ResY=240'],stdout=FNULL, stderr=FNULL, env=my_env)
+    subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', 
+                      '/Game/Maps/Town02', '-ResX=16', '-ResY=9'], stdout=FNULL, stderr=FNULL, env=my_env)
     print("done")
 
     device = torch.device('cpu')

@@ -42,7 +42,7 @@ def distance_3d(pose1, pose2):
 13 - HardRainSunset
 14 - SoftRainSunset
 '''
-def run_carla_train(total_frames, model, device, history, weather, vehicles, pedestians, DG_next_location, DG_next_episode,DG_threshold) :
+def run_carla_train(total_frames, model, device, history, weather, vehicles, pedestians, DG_next_location, DG_next_episode,DG_threshold,carla_port) :
     with make_carla_client("localhost", 2000) as client:
         print('carla client connected')
         # setting up HDF5 file
@@ -179,13 +179,13 @@ def run_carla_train(total_frames, model, device, history, weather, vehicles, ped
         hdf5_file.close()
         return dagger_episode_count, skipped_frames-51*dagger_episode_count
 
-def dagger(frames, model, device, history, weather, vehicles, pedestians, DG_next_location, DG_next_episode, DG_threshold):
+def dagger(frames, model, device, history, weather, carla_port, vehicles, pedestians, DG_next_location, DG_next_episode, DG_threshold):
     while True:
         try:
             episode_count, skipped = run_carla_train(total_frames=frames, model=model, device=device, history=history, 
                                                                               weather=weather, vehicles=vehicles, pedestians=pedestians, 
                                                                               DG_next_episode=DG_next_episode, DG_threshold=DG_threshold,
-                                                                              DG_next_location=DG_next_location,)
+                                                                              DG_next_location=DG_next_location, carla_port=carla_port)
             print('done')
             return episode_count, skipped
         except TCPConnectionError as error:

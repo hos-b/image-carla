@@ -39,12 +39,14 @@ parser.add_argument('-epochs', type=int, dest="num_epochs", default=200, help='n
 parser.add_argument("--weighted", action = "store_true", dest="weighted", default = False, help ='apply weights to loss function')
 parser.add_argument("--dagger", action = "store_true", dest="dagger", default = False, help ='perform dagger after each epoch')
 parser.add_argument('-dagger_frames', type=int, dest="dagger_frames", default=1000, help='number of dagger frames to train')
+parser.add_argument('-carla_port', type=int, dest="carla_port", default=2000, help='port to connect to for carla')
 parser.add_argument('-val_episodes', type=int, dest="val_episodes", default=10, help='run x validation episodes')
 parser.add_argument('-val_frames', type=int, dest="val_frames", default=300, help='run for x frames')
 parser.add_argument('-history', type=int, dest="history", default=1, help='number of previous frames to stack')
 args = parser.parse_args()
 print("settings:")
 print("continute flag : {}\t save snaps : {}".format(args.continute_training,args.save_snaps))
+print("starting epoch : {}\t carla port : {}".format(args.start_epoch,args.carla_port))
 print("name : {}\t learning rate : {}".format(args.name,args.learning_rate))
 print("batch size : {}\t\t epochs : {}".format(args.batch_size,args.num_epochs))
 print("val eps : {}\t\t val frame : {}".format(args.val_episodes,args.val_frames))
@@ -84,7 +86,8 @@ print("starting carla in server mode\n...")
 my_env = os.environ.copy()
 my_env["SDL_VIDEODRIVER"] = "offscreen"
 FNULL = open(os.devnull, 'w')
-subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '-ResX=16', 'ResY=9'], stdout=FNULL, stderr=FNULL, env=my_env)
+subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '/Game/Maps/Town02',
+                 '-ResX=16', '-ResY=9',"-carla-world-port=".format(args.carla_port)], stdout=FNULL, stderr=FNULL, env=my_env)
 print("done")
 #train.py --snap -name=dnet_h3w_svdag -bsize=16 -val_episodes=10 -val_frames=400 -history=3 --weighted --dagger -dagger_frames=150
 print("training ...")
@@ -135,7 +138,7 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
     # dagger episodes ------------------------------------------------------------------------------------------------------------------------------
     if args.dagger:
         writer.add_scalar("status", STATUS_RECORDING_DAGGER, epoch+STATUS_RECORDING_DAGGER)
-        dg_episodes, skipped_frames = dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1,
+        dg_episodes, skipped_frames = dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, carla_port=args.carla_port,
                                 vehicles=30, pedestians=30, DG_next_location=dagger_next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.075)
         dagger_episode_index +=dg_episodes
         #TODO figure out a good system 
@@ -200,7 +203,7 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
     writer.add_scalar("training/l2_weight", torch.exp(-l2_weight).item(), epoch)
     writer.add_scalar("training/ce_weight", torch.exp(-ce_weight).item(), epoch)
     # simulation episodes --------------------------------------------------------------------------------------------------------------------------
-    acv, acp, aco, aiol, aior = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, 
+    acv, acp, aco, aiol, aior = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, carla_port=args.carla_port,
                                                history=args.history, save_images=False, weather=1, vehicles=30, pedestians=30)
     writer.add_scalar("carla/vehicle_collision", sum(acv)/len(acv), epoch)
     writer.add_scalar("carla/pedestrian_collision", sum(acp)/len(acp), epoch)
