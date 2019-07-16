@@ -94,9 +94,10 @@ lowest_loss = 20
 dagger_episode_index = 0
 dagger_next_loc = 0
 dagger_loss = torch.nn.CrossEntropyLoss().to(device)
+if args.dagger :
+    print("removing old dagger dataset")
+    os.system("rm -f /tmp/dagger_dataset.hdf5")
 # start training
-print("removing old dagger dataset")
-os.system("rm -f /tmp/dagger_dataset.hdf5")
 for epoch in range(args.start_epoch, args.num_epochs+1):   
     print("epoch {}/{}".format(epoch,args.num_epochs))
     reg_loss_t = reg_loss_v = reg_loss_d = 0
