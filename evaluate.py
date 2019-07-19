@@ -83,7 +83,7 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
             scene = client.load_settings(settings)
             number_of_player_starts = len(scene.player_start_spots)
             player_start = random.randint(0, max(0, number_of_player_starts - 1))
-            print_over_same_line("running eval episode {}/{}".format(episode+1,number_of_episodes))
+            print_over_same_line("running eval episode {}/{} in location {}".format(episode+1,number_of_episodes,player_start))
             client.start_episode(player_start)
             
             frames = torch.zeros(1, 3*history, 256, 256).float().to(device)
@@ -125,7 +125,7 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
                 pred_cls = pred_cls.item()
                 pred_reg = pred_reg.item()
                 agent = label_to_action_dobule(pred_cls, pred_reg)
-
+                
                 # sending back agent's controls
                 control = VehicleControl()
                 control.steer = pred_reg
@@ -165,28 +165,29 @@ if __name__ == "__main__":
     
     print("starting carla in server mode")
     my_env = os.environ.copy()
-    my_env["SDL_VIDEODRIVER"] = "offscreen"
+    my_env["DISPLAY"] = ""
     FNULL = open(os.devnull, 'w')
-    subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', 
-                      '/Game/Maps/Town02', '-ResX=16', '-ResY=9'], stdout=FNULL, stderr=FNULL, env=my_env)
+    subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '/Game/Maps/Town02', 
+                      '-opengl', '-ResX=640', '-ResY=480','-world-port=5000'], stdout=FNULL, stderr=FNULL, env=my_env)
     print("done")
 
     device = torch.device('cpu')
     agent = CBCAgent(device=device, history=3, name='efficient-double-large')
     
-    model_name = "dnet_h3w_14th_model_24"
-    agent.net.load_state_dict(torch.load("snaps/{}".format(model_name)))
-    acv, acp, aco, aiol, aior = evaluate_model(10,800,agent,device,3,True,1,30,60)
-    #carl.close()
-    os.system("mkdir data/{}".format(model_name))
-    os.system("cp snaps/{} data/{}".format(model_name, model_name))
+    for model_name in ['dnet_h3w_16th_HD_model_32'] :
+        print("evaluating {}".format(model_name))
+        agent.net.load_state_dict(torch.load("snaps/{}".format(model_name)))
+        acv, acp, aco, aiol, aior = evaluate_model(10,800,agent,device,3,True,1,30,60,carla_port=5000)
+        #carl.close()
+        os.system("mkdir data/{}".format(model_name))
+        os.system("cp snaps/{} data/{}".format(model_name, model_name))
     
-    for i in range(10):
-        os.system("ffmpeg -r 20 -i data/RGBFront_e{:02d}_f%03d.png -b 500000  data/{}/episode_{}.mp4".format(i,model_name,i))
-    os.system("rm -f data/*.png")
-    os.system("nautilus ./data")
-    print("avg collision vehicle {}".format(sum(acv)/len(acv)))
-    print("avg collision pedestrain {}".format(sum(acp)/len(acp)))
-    print("avg collision other {}".format(sum(aco)/len(aco)))
-    print("avg intersection otherlane {}".format(sum(aiol)/len(aiol)))
-    print("avg intersection offroad {}".format(sum(aior)/len(aior)))
+        for i in range(10):
+            os.system("ffmpeg -r 20 -i data/RGBFront_e{:02d}_f%03d.png -b 500000  data/{}/episode_{}.mp4".format(i,model_name,i))
+        os.system("rm -f data/*.png")
+        os.system("nautilus ./data")
+        print("avg collision vehicle {}".format(sum(acv)/len(acv)))
+        print("avg collision pedestrain {}".format(sum(acp)/len(acp)))
+        print("avg collision other {}".format(sum(aco)/len(aco)))
+        print("avg intersection otherlane {}".format(sum(aiol)/len(aiol)))
+        print("avg intersection offroad {}".format(sum(aior)/len(aior)))

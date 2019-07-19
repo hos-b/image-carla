@@ -86,7 +86,7 @@ print("starting carla in server mode\n...")
 my_env = os.environ.copy()
 my_env["DISPLAY"] = ""
 FNULL = open(os.devnull, 'w')
-subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '/Game/Maps/Town02', '-opengl'
+subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '/Game/Maps/Town02', '-opengl',
                  '-ResX=16', '-ResY=9','-world-port={}'.format(args.carla_port)], stdout=FNULL, stderr=FNULL, env=my_env)
 print("done")
 print("training ...")
@@ -138,7 +138,7 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
     if args.dagger:
         writer.add_scalar("status", STATUS_RECORDING_DAGGER, epoch+STATUS_RECORDING_DAGGER)
         dg_episodes, skipped_frames = dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, carla_port=args.carla_port,
-                                vehicles=30, pedestians=30, DG_next_location=dagger_next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.075)
+                                vehicles=40, pedestians=40, DG_next_location=dagger_next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.08)
         dagger_episode_index +=dg_episodes
         #TODO figure out a good system 
         dagger_next_loc = (dagger_next_loc+random.randint(1, 4))%80
@@ -205,7 +205,7 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
     writer.add_scalar("training/ce_weight", torch.exp(-ce_weight).item(), epoch)
     # simulation episodes --------------------------------------------------------------------------------------------------------------------------
     acv, acp, aco, aiol, aior = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, carla_port=args.carla_port,
-                                               history=args.history, save_images=False, weather=1, vehicles=30, pedestians=30)
+                                               history=args.history, save_images=False, weather=1, vehicles=40, pedestians=40)
     writer.add_scalar("carla/vehicle_collision", sum(acv)/len(acv), epoch)
     writer.add_scalar("carla/pedestrian_collision", sum(acp)/len(acp), epoch)
     writer.add_scalar("carla/other_collision", sum(aco)/len(aco), epoch)
@@ -216,7 +216,7 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
     if args.save_snaps :
         save_path = os.path.join(snapshot_dir,args.name)
         torch.save(optimizer.state_dict(), save_path+"_optimizer")
-        if current_val_loss < lowest_loss or epoch%2==0 or average_fault<0.1:
+        if current_val_loss < lowest_loss or epoch%2==0 or average_fault<10:
             if current_val_loss < lowest_loss :
                 lowest_loss = current_val_loss
             agent.save(save_path+"_model_{}".format(epoch))
