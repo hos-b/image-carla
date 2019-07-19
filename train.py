@@ -38,6 +38,7 @@ parser.add_argument('-epochs', type=int, dest="num_epochs", default=200, help='n
 # specific args for this training ------------------------------------------------------------------------------------------------------------------
 parser.add_argument("--weighted", action = "store_true", dest="weighted", default = False, help ='apply weights to loss function')
 parser.add_argument("--dagger", action = "store_true", dest="dagger", default = False, help ='perform dagger after each epoch')
+parser.add_argument("--overwrite", action = "store_true", dest="overwrite_dagger", default = False, help ='overwrite the old dagger dataset')
 parser.add_argument('-dagger_frames', type=int, dest="dagger_frames", default=1000, help='number of dagger frames to train')
 parser.add_argument('-carla_port', type=int, dest="carla_port", default=2000, help='port to connect to for carla')
 parser.add_argument('-val_episodes', type=int, dest="val_episodes", default=10, help='run x validation episodes')
@@ -96,7 +97,7 @@ lowest_loss = 20
 dagger_episode_index = 0
 dagger_next_loc = 0
 dagger_loss = torch.nn.CrossEntropyLoss().to(device)
-if args.dagger :
+if args.overwrite_dagger :
     print("removing old dagger dataset")
     os.system("rm -f /tmp/dagger_dataset.hdf5")
 # start training
