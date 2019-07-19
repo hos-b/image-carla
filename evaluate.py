@@ -58,6 +58,7 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
         avg_collision_other = []
         avg_intersection_otherlane = []
         avg_intersection_offroad = []
+        avg_distance_traveled = []
         for episode in range(number_of_episodes):
             # settings
             settings = CarlaSettings()
@@ -83,7 +84,7 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
             scene = client.load_settings(settings)
             number_of_player_starts = len(scene.player_start_spots)
             player_start = random.randint(0, max(0, number_of_player_starts - 1))
-            print_over_same_line("running eval episode {}/{} in location {}".format(episode+1,number_of_episodes,player_start))
+            print("running eval episode {}/{} in location {}".format(episode+1,number_of_episodes,player_start))
             client.start_episode(player_start)
             
             frames = torch.zeros(1, 3*history, 256, 256).float().to(device)
@@ -93,8 +94,11 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
             collision_other = 0
             intersection_otherlane = 0
             intersection_offroad = 0
+            distance_traveled = 0
+            last_position = 0
             # execute frames
             for frame_index in range(frames_per_episode):
+                print_over_same_line("frame {}/{}".format(frame_index+1,frames_per_episode))
                 measurements, sensor_data = client.read_data()
                 
                 #print_measurements(measurements)
@@ -109,12 +113,15 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
                 frame = np.transpose(frame, (1, 0, 2))
                 frame = transform(frame).float().to(device)
                 
-                # if this is the first frame, fill the history buffer with the current frame
-                # otherwise shift
+                # if first frame, fill the history && set the last_pose to inital one
+                # otherwise shift frames           && increase distance_traveled
                 if frame_index ==0 :
+                    last_position = measurements.player_measurements.transform.location
                     for i in range(history) :
                         frames[0, i*3:(i+1)*3] = frame
                 else :
+                    distance_traveled += distance_3d(last_position, measurements.player_measurements.transform.location)
+                    last_position = measurements.player_measurements.transform.location
                     frames[0, 3:] = frames[0, 0:-3]
                     frames[0, :3] = frame
                 
@@ -147,16 +154,17 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
             avg_collision_other.append(collision_other / frames_per_episode)
             avg_intersection_otherlane.append(intersection_otherlane / frames_per_episode)
             avg_intersection_offroad.append(intersection_offroad / frames_per_episode)
+            avg_distance_traveled.append(distance_traveled)
             
-        return avg_collision_vehicle, avg_collision_pedestrian, avg_collision_other, avg_intersection_otherlane, avg_intersection_offroad
+        return avg_collision_vehicle, avg_collision_pedestrian, avg_collision_other, avg_intersection_otherlane, avg_intersection_offroad, avg_distance_traveled
 
 def evaluate_model(episodes, frames, model, device, history, save_images, weather, vehicles, pedestians,carla_port):
     while True:
         try:
-            acv, acp, aco, aiol, aior = run_carla_eval(number_of_episodes=episodes, frames_per_episode=frames, model=model, device=device, history=history,
+            acv, acp, aco, aiol, aior, adt = run_carla_eval(number_of_episodes=episodes, frames_per_episode=frames, model=model, device=device, history=history,
                                                        save_images=save_images, weather=weather, vehicles=vehicles, pedestians=pedestians,carla_port=carla_port)
             print('done')
-            return acv, acp, aco, aiol, aior
+            return acv, acp, aco, aiol, aior, adt
         except TCPConnectionError as error:
             logging.error(error)
             time.sleep(1)
@@ -177,7 +185,7 @@ if __name__ == "__main__":
     for model_name in ['dnet_h3w_16th_HD_model_32'] :
         print("evaluating {}".format(model_name))
         agent.net.load_state_dict(torch.load("snaps/{}".format(model_name)))
-        acv, acp, aco, aiol, aior = evaluate_model(10,800,agent,device,3,True,1,30,60,carla_port=5000)
+        acv, acp, aco, aiol, aior, adt = evaluate_model(10,800,agent,device,3,True,1,30,60,carla_port=5000)
         #carl.close()
         os.system("mkdir data/{}".format(model_name))
         os.system("cp snaps/{} data/{}".format(model_name, model_name))
@@ -191,3 +199,4 @@ if __name__ == "__main__":
         print("avg collision other {}".format(sum(aco)/len(aco)))
         print("avg intersection otherlane {}".format(sum(aiol)/len(aiol)))
         print("avg intersection offroad {}".format(sum(aior)/len(aior)))
+        print("distance traveled\n {}".format_map(adt)) 

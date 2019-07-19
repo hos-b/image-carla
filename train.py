@@ -142,7 +142,7 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
                                 vehicles=40, pedestians=40, DG_next_location=dagger_next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.08)
         dagger_episode_index +=dg_episodes
         #TODO figure out a good system 
-        dagger_next_loc = (dagger_next_loc+random.randint(1, 4))%80
+        dagger_next_loc = (dagger_next_loc+random.randint(6, 10))%140
         # dagger loader
         writer.add_scalar("status", STATUS_TRAINING_DAGGER, epoch+STATUS_TRAINING_DAGGER)
         daggr_loader = get_data_loader(batch_size=args.batch_size, train=True, history=args.history, dagger=True)
@@ -205,13 +205,16 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
     writer.add_scalar("training/l2_weight", torch.exp(-l2_weight).item(), epoch)
     writer.add_scalar("training/ce_weight", torch.exp(-ce_weight).item(), epoch)
     # simulation episodes --------------------------------------------------------------------------------------------------------------------------
-    acv, acp, aco, aiol, aior = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, carla_port=args.carla_port,
+    acv, acp, aco, aiol, aior, adt = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, carla_port=args.carla_port,
                                                history=args.history, save_images=False, weather=1, vehicles=40, pedestians=40)
-    writer.add_scalar("carla/vehicle_collision", sum(acv)/len(acv), epoch)
-    writer.add_scalar("carla/pedestrian_collision", sum(acp)/len(acp), epoch)
-    writer.add_scalar("carla/other_collision", sum(aco)/len(aco), epoch)
+    writer.add_scalar("carla/average_distance_traveled", sum(adt)/len(adt), epoch)   
     writer.add_scalar("carla/otherlane_intersection", sum(aiol)/len(aiol), epoch)
     writer.add_scalar("carla/offroad_intersection", sum(aior)/len(aior), epoch)
+    writer.add_scalar("carla/other_collision", sum(aco)/len(aco), epoch)
+    writer.add_scalar("carla/vehicle_collision", sum(acv)/len(acv), epoch)
+    writer.add_scalar("carla/pedestrian_collision", sum(acp)/len(acp), epoch)
+    
+    
     average_fault =  sum(aiol)/len(aiol) +sum(aior)/len(aior)
     # saving model snapshots
     if args.save_snaps :
