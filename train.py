@@ -91,8 +91,9 @@ subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-serve
                  '-ResX=16', '-ResY=9','-world-port={}'.format(args.carla_port)], stdout=FNULL, stderr=FNULL, env=my_env)
 print("done")
 print("training ...")
-# lowest loss : save  best snapshots of the network
+# metrics to save  best snapshots of the network
 lowest_loss = 20
+highest_distance = 0
 # dagger init
 dagger_episode_index = 0
 dagger_next_loc = 0
@@ -214,15 +215,17 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
     writer.add_scalar("carla/vehicle_collision", sum(acv)/len(acv), epoch)
     writer.add_scalar("carla/pedestrian_collision", sum(acp)/len(acp), epoch)
     
-    
+    average_distane = sum(adt)/len(adt)
     average_fault =  sum(aiol)/len(aiol) +sum(aior)/len(aior)
     # saving model snapshots
     if args.save_snaps :
         save_path = os.path.join(snapshot_dir,args.name)
         torch.save(optimizer.state_dict(), save_path+"_optimizer")
-        if current_val_loss < lowest_loss or epoch%2==0 or average_fault<10:
+        if current_val_loss < lowest_loss or epoch%2==0 or average_fault<10 or average_distane>highest_distance:
             if current_val_loss < lowest_loss :
                 lowest_loss = current_val_loss
+            if average_distane>highest_distance: 
+                highest_distance = average_distane
             agent.save(save_path+"_model_{}".format(epoch))
             print("saved snapshot at epoch {}".format(epoch))            
 writer.close()
