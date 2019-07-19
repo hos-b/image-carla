@@ -139,7 +139,7 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
     if args.dagger:
         writer.add_scalar("status", STATUS_RECORDING_DAGGER, epoch+STATUS_RECORDING_DAGGER)
         dg_episodes, skipped_frames = dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, carla_port=args.carla_port,
-                                vehicles=40, pedestians=40, DG_next_location=dagger_next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.08)
+                                vehicles=50, pedestians=30, DG_next_location=dagger_next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.08)
         dagger_episode_index +=dg_episodes
         #TODO figure out a good system 
         dagger_next_loc = (dagger_next_loc+random.randint(6, 10))%140
@@ -206,7 +206,7 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
     writer.add_scalar("training/ce_weight", torch.exp(-ce_weight).item(), epoch)
     # simulation episodes --------------------------------------------------------------------------------------------------------------------------
     acv, acp, aco, aiol, aior, adt = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, carla_port=args.carla_port,
-                                               history=args.history, save_images=False, weather=1, vehicles=40, pedestians=40)
+                                               history=args.history, save_images=False, weather=1, vehicles=50, pedestians=30)
     writer.add_scalar("carla/average_distance_traveled", sum(adt)/len(adt), epoch)   
     writer.add_scalar("carla/otherlane_intersection", sum(aiol)/len(aiol), epoch)
     writer.add_scalar("carla/offroad_intersection", sum(aior)/len(aior), epoch)
