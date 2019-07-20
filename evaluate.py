@@ -40,7 +40,7 @@ def distance_3d(pose1, pose2):
 13 - HardRainSunset
 14 - SoftRainSunset
 '''
-def run_carla_eval(number_of_episodes, frames_per_episode, model, device, history, save_images, weather, vehicles, pedestians, carla_port) :
+def run_carla_eval(number_of_episodes, frames_per_episode, model, device, history, save_images, weather, vehicles, pedestians, carla_port, ground_truth) :
     with make_carla_client("localhost", carla_port) as client:
         print('carla client connected')
         # setting up transform
@@ -59,6 +59,9 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
         avg_intersection_otherlane = []
         avg_intersection_offroad = []
         avg_distance_traveled = []
+        avg_accidents_vehicle = []
+        avg_accidents_pedestrain = []
+        avg_accidents_other = []
         for episode in range(number_of_episodes):
             # settings
             settings = CarlaSettings()
@@ -89,13 +92,22 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
             
             frames = torch.zeros(1, 3*history, 256, 256).float().to(device)
 
+            # variables for normal metrics
             collision_vehicle = 0
             collision_pedestrian = 0
             collision_other = 0
             intersection_otherlane = 0
             intersection_offroad = 0
+            # variables for distance traveled metric
             distance_traveled = 0
             last_position = 0
+            # variables for accident count metrics
+            last_accident_vehicle = 0
+            last_accident_pedestrain = 0
+            last_accident_other = 0
+            accident_count_vehicle = 0
+            accident_count_pedestrain = 0
+            accident_count_other = 0
             # execute frames
             for frame_index in range(frames_per_episode):
                 print_over_same_line("frame {}/{}".format(frame_index+1,frames_per_episode))
@@ -113,39 +125,51 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
                 frame = np.transpose(frame, (1, 0, 2))
                 frame = transform(frame).float().to(device)
                 
-                # if first frame, fill the history && set the last_pose to inital one
-                # otherwise shift frames           && increase distance_traveled
+                # if first frame, fill the history  && set the last_pose to inital one
+                # otherwise shift frames            && increase distance_traveled        && check las
                 if frame_index ==0 :
                     last_position = measurements.player_measurements.transform.location
                     for i in range(history) :
                         frames[0, i*3:(i+1)*3] = frame
                 else :
-                    distance_traveled += distance_3d(last_position, measurements.player_measurements.transform.location)
-                    last_position = measurements.player_measurements.transform.location
                     frames[0, 3:] = frames[0, 0:-3]
                     frames[0, :3] = frame
+                    # updating variables for metrics
+                    distance_traveled += distance_3d(last_position, measurements.player_measurements.transform.location)
+                    last_position = measurements.player_measurements.transform.location
+                    accident_count_vehicle += 1 if (last_accident_vehicle==0 and measurements.player_measurements.collision_vehicles>0) else 0
+                    accident_count_pedestrain +=1 if (last_accident_pedestrain==0 and measurements.player_measurements.collision_pedestrians>0) else 0
+                    accident_count_other+=1 if (last_accident_other==0 and measurements.player_measurements.collision_other>0) else 0
+                    last_accident_vehicle = measurements.player_measurements.collision_vehicles
+                    last_accident_pedestrain = measurements.player_measurements.collision_pedestrians
+                    last_accident_other = measurements.player_measurements.collision_other
                 
-                # getting agent predictions
-                model.net.eval()
-                pred_cls, pred_reg  = model.predict(frames)
-                pred_cls = torch.argmax(pred_cls)
-                pred_cls = pred_cls.item()
-                pred_reg = pred_reg.item()
-                agent = label_to_action_dobule(pred_cls, pred_reg)
-                
-                # sending back agent's controls
                 control = VehicleControl()
-                control.steer = pred_reg
-                control.throttle = agent[1] if measurements.player_measurements.forward_speed * 3.6 <=30 else 0
-                control.brake = agent[2]
-                control.hand_brake = False
-                control.reverse = False
+                # use autopilot
+                if ground_truth : 
+                    control = measurements.player_measurements.autopilot_control
+                else :
+                    # getting agent predictions
+                    model.net.eval()
+                    pred_cls, pred_reg  = model.predict(frames)
+                    pred_cls = torch.argmax(pred_cls)
+                    pred_cls = pred_cls.item()
+                    pred_reg = pred_reg.item()
+                    agent = label_to_action_dobule(pred_cls, pred_reg)
+                
+                    # sending back agent's controls
+                    control.steer = pred_reg
+                    control.throttle = agent[1] if measurements.player_measurements.forward_speed * 3.6 <=30 else 0
+                    control.brake = agent[2]
+                    control.hand_brake = False
+                    control.reverse = False
+
                 client.send_control(control)
 
                 # frame statistics
-                collision_vehicle += measurements.player_measurements.collision_vehicles
-                collision_pedestrian += measurements.player_measurements.collision_pedestrians
-                collision_other += measurements.player_measurements.collision_other
+                collision_vehicle += last_accident_vehicle
+                collision_pedestrian += last_accident_pedestrain
+                collision_other += last_accident_other
                 intersection_otherlane += 100 * measurements.player_measurements.intersection_otherlane
                 intersection_offroad += 100 * measurements.player_measurements.intersection_offroad
             
@@ -155,16 +179,19 @@ def run_carla_eval(number_of_episodes, frames_per_episode, model, device, histor
             avg_intersection_otherlane.append(intersection_otherlane / frames_per_episode)
             avg_intersection_offroad.append(intersection_offroad / frames_per_episode)
             avg_distance_traveled.append(distance_traveled)
+            avg_accidents_vehicle.append(accident_count_vehicle)
+            avg_accidents_pedestrain.append(accident_count_pedestrain)
+            avg_accidents_other.append(accident_count_other)
             
-        return avg_collision_vehicle, avg_collision_pedestrian, avg_collision_other, avg_intersection_otherlane, avg_intersection_offroad, avg_distance_traveled
+        return avg_collision_vehicle, avg_collision_pedestrian, avg_collision_other, avg_intersection_otherlane, avg_intersection_offroad, avg_distance_traveled, avg_accidents_vehicle, avg_accidents_pedestrain, avg_accidents_other
 
-def evaluate_model(episodes, frames, model, device, history, save_images, weather, vehicles, pedestians,carla_port):
+def evaluate_model(episodes, frames, model, device, history, save_images, weather, vehicles, pedestians,carla_port, ground_truth):
     while True:
         try:
-            acv, acp, aco, aiol, aior, adt = run_carla_eval(number_of_episodes=episodes, frames_per_episode=frames, model=model, device=device, history=history,
-                                                       save_images=save_images, weather=weather, vehicles=vehicles, pedestians=pedestians,carla_port=carla_port)
+            acv, acp, aco, aiol, aior, adt, aav, aap, aao = run_carla_eval(number_of_episodes=episodes, frames_per_episode=frames, model=model, device=device, history=history,
+                                                       save_images=save_images, weather=weather, vehicles=vehicles, pedestians=pedestians,carla_port=carla_port, ground_truth=ground_truth)
             print('done')
-            return acv, acp, aco, aiol, aior, adt
+            return acv, acp, aco, aiol, aior, adt, aav, aap, aao
         except TCPConnectionError as error:
             logging.error(error)
             time.sleep(1)
@@ -185,7 +212,7 @@ if __name__ == "__main__":
     for model_name in ['dnet_h3w_16th_HD_model_32'] :
         print("evaluating {}".format(model_name))
         agent.net.load_state_dict(torch.load("snaps/{}".format(model_name)))
-        acv, acp, aco, aiol, aior, adt = evaluate_model(10,800,agent,device,3,True,1,30,60,carla_port=5000)
+        acv, acp, aco, aiol, aior, adt, aav, aap, aao = evaluate_model(10,800,agent,device,3,True,1,30,60,carla_port=5000, ground_truth=False)
         #carl.close()
         os.system("mkdir data/{}".format(model_name))
         os.system("cp snaps/{} data/{}".format(model_name, model_name))
@@ -199,4 +226,7 @@ if __name__ == "__main__":
         print("avg collision other {}".format(sum(aco)/len(aco)))
         print("avg intersection otherlane {}".format(sum(aiol)/len(aiol)))
         print("avg intersection offroad {}".format(sum(aior)/len(aior)))
-        print("distance traveled\n {}".format_map(adt)) 
+        print("distance traveled\n {}".format_map(adt))
+        print("accident count vehicle\n {}".format_map(aav))
+        print("accident count pedestrian\n {}".format_map(aap))
+        print("accident count other\n {}".format_map(aao))

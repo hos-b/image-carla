@@ -206,14 +206,14 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
     writer.add_scalar("training/l2_weight", torch.exp(-l2_weight).item(), epoch)
     writer.add_scalar("training/ce_weight", torch.exp(-ce_weight).item(), epoch)
     # simulation episodes --------------------------------------------------------------------------------------------------------------------------
-    acv, acp, aco, aiol, aior, adt = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, carla_port=args.carla_port,
-                                               history=args.history, save_images=False, weather=1, vehicles=50, pedestians=30)
-    writer.add_scalar("carla/average_distance_traveled", sum(adt)/len(adt), epoch)   
+    acv, acp, aco, aiol, aior, adt, aav, aap, aao = evaluate_model(episodes=args.val_episodes, frames=args.val_frames, model=agent, device=device, carla_port=args.carla_port,
+                                               history=args.history, save_images=False, weather=1, vehicles=50, pedestians=30, ground_truth=False)
+    writer.add_scalar("carla/average_distance_traveled", sum(adt)/len(adt), epoch)
+    writer.add_scalar("carla/average_accident_vehicle", sum(aav)/len(aav), epoch)
+    writer.add_scalar("carla/average_accident_pedestrian", sum(aap)/len(aap), epoch)
+    writer.add_scalar("carla/average_accident_other", sum(aao)/len(aao), epoch)
     writer.add_scalar("carla/otherlane_intersection", sum(aiol)/len(aiol), epoch)
     writer.add_scalar("carla/offroad_intersection", sum(aior)/len(aior), epoch)
-    writer.add_scalar("carla/other_collision", sum(aco)/len(aco), epoch)
-    writer.add_scalar("carla/vehicle_collision", sum(acv)/len(acv), epoch)
-    writer.add_scalar("carla/pedestrian_collision", sum(acp)/len(acp), epoch)
     
     average_distane = sum(adt)/len(adt)
     average_fault =  sum(aiol)/len(aiol) +sum(aior)/len(aior)
