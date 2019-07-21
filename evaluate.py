@@ -212,20 +212,18 @@ if __name__ == "__main__":
     for model_name in ['dnet_h3w_16th_HD_model_32'] :
         print("evaluating {}".format(model_name))
         agent.net.load_state_dict(torch.load("snaps/{}".format(model_name)))
-        acv, acp, aco, aiol, aior, adt, aav, aap, aao = evaluate_model(10,800,agent,device,3,True,1,30,60,carla_port=5000, ground_truth=False)
-        #carl.close()
-        os.system("mkdir data/{}".format(model_name))
-        os.system("cp snaps/{} data/{}".format(model_name, model_name))
+        acv, acp, aco, aiol, aior, adt, aav, aap, aao = evaluate_model(100,600,agent,device,3,False,1,30,60,carla_port=5000, ground_truth=False)
+        # carl.close()
+        # os.system("mkdir data/{}".format(model_name))
+        # os.system("cp snaps/{} data/{}".format(model_name, model_name))
     
-        for i in range(10):
-            os.system("ffmpeg -r 20 -i data/RGBFront_e{:02d}_f%03d.png -b 500000  data/{}/episode_{}.mp4".format(i,model_name,i))
-        os.system("rm -f data/*.png")
-        os.system("nautilus ./data")
-        print("avg collision vehicle {}".format(sum(acv)/len(acv)))
-        print("avg collision pedestrain {}".format(sum(acp)/len(acp)))
-        print("avg collision other {}".format(sum(aco)/len(aco)))
-        print("avg intersection otherlane {}".format(sum(aiol)/len(aiol)))
-        print("avg intersection offroad {}".format(sum(aior)/len(aior)))
+        # for i in range(10):
+        #    os.system("ffmpeg -r 20 -i data/RGBFront_e{:02d}_f%03d.png -b 500000  data/{}/episode_{}.mp4".format(i,model_name,i))
+        # os.system("rm -f data/*.png")
+        # os.system("nautilus ./data")
+        
+        print("avg intersection otherlane {}".format(aiol))
+        print("avg intersection offroad {}".format(aior))
         print("distance traveled\n {}".format_map(adt))
         print("accident count vehicle\n {}".format_map(aav))
         print("accident count pedestrian\n {}".format_map(aap))
