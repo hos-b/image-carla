@@ -139,7 +139,8 @@ for epoch in range(args.start_epoch, args.num_epochs+1):
     # dagger episodes ------------------------------------------------------------------------------------------------------------------------------
     if args.dagger:
         writer.add_scalar("status", STATUS_RECORDING_DAGGER, epoch+STATUS_RECORDING_DAGGER)
-        dg_episodes, skipped_frames = dagger(frames=args.dagger_frames, model=agent, device=device, history=args.history, weather=1, carla_port=args.carla_port,
+        custom = args.dagger_frames if epoch<4 else 1600
+        dg_episodes, skipped_frames = dagger(frames=custom, model=agent, device=device, history=args.history, weather=1, carla_port=args.carla_port,
                                 vehicles=50, pedestians=30, DG_next_location=dagger_next_loc, DG_next_episode=dagger_episode_index, DG_threshold=0.08)
         dagger_episode_index +=dg_episodes
         #TODO figure out a good system 
