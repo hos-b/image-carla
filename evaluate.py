@@ -224,21 +224,21 @@ if __name__ == "__main__":
         # os.system("rm -f data/*.png")
         # os.system("nautilus ./data")
         
-        with open('csv/aiol_{}.csv'.format(model_name), 'wb') as myfile:
+        with open('csv/aiol_{}.csv'.format(model_name), 'w') as myfile:
             wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
             wr.writerow(aiol)
-        with open('csv/aior_{}.csv'.format(model_name), 'wb') as myfile:
+        with open('csv/aior_{}.csv'.format(model_name), 'w') as myfile:
             wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
             wr.writerow(aior)
-        with open('csv/adt_{}.csv'.format(model_name), 'wb') as myfile:
+        with open('csv/adt_{}.csv'.format(model_name), 'w') as myfile:
             wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
             wr.writerow(adt)
-        with open('csv/aav_{}.csv'.format(model_name), 'wb') as myfile:
+        with open('csv/aav_{}.csv'.format(model_name), 'w') as myfile:
             wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
             wr.writerow(aav)
-        with open('csv/aap_{}.csv'.format(model_name), 'wb') as myfile:
+        with open('csv/aap_{}.csv'.format(model_name), 'w') as myfile:
             wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
             wr.writerow(aap)
-        with open('csv/aao_{}.csv'.format(model_name), 'wb') as myfile:
+        with open('csv/aao_{}.csv'.format(model_name), 'w') as myfile:
             wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
             wr.writerow(aao)
