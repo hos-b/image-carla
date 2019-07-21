@@ -197,22 +197,22 @@ def evaluate_model(episodes, frames, model, device, history, save_images, weathe
             time.sleep(1)
 
 if __name__ == "__main__":
-    
+    random.seed(30)
     print("starting carla in server mode")
     my_env = os.environ.copy()
     my_env["DISPLAY"] = ""
     FNULL = open(os.devnull, 'w')
     subprocess.Popen(['server/./CarlaUE4.sh', '-benchmark', '-fps=20', '-carla-server', '-windowed', '/Game/Maps/Town02', 
-                      '-opengl', '-ResX=640', '-ResY=480','-world-port=5000'], stdout=FNULL, stderr=FNULL, env=my_env)
+                      '-opengl', '-ResX=16', '-ResY=9','-world-port=5000'], stdout=FNULL, stderr=FNULL, env=my_env)
     print("done")
 
-    device = torch.device('cpu')
+    device = torch.device('cuda')
     agent = CBCAgent(device=device, history=3, name='efficient-double-large')
     
     for model_name in ['dnet_h3w_16th_HD_model_32'] :
         print("evaluating {}".format(model_name))
         agent.net.load_state_dict(torch.load("snaps/{}".format(model_name)))
-        acv, acp, aco, aiol, aior, adt, aav, aap, aao = evaluate_model(100,600,agent,device,3,False,1,30,60,carla_port=5000, ground_truth=False)
+        acv, acp, aco, aiol, aior, adt, aav, aap, aao = evaluate_model(50,600,agent,device,3,False,1,30,0,carla_port=5000, ground_truth=False)
         # carl.close()
         # os.system("mkdir data/{}".format(model_name))
         # os.system("cp snaps/{} data/{}".format(model_name, model_name))
