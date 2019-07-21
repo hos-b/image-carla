@@ -8,6 +8,7 @@ import os
 import numpy as np
 import h5py
 import subprocess
+import csv
 
 import torchvision.transforms as transforms
 import torch
@@ -209,10 +210,11 @@ if __name__ == "__main__":
     device = torch.device('cuda')
     agent = CBCAgent(device=device, history=3, name='efficient-double-large')
     
-    for model_name in ['dnet_h3w_16th_HD_model_32'] :
+    for model_name in ['dnet_h3w_16th_HD_model_32', 'dnet_h3w_16th_HD_nodag_model_32'] :
         print("evaluating {}".format(model_name))
         agent.net.load_state_dict(torch.load("snaps/{}".format(model_name)))
-        acv, acp, aco, aiol, aior, adt, aav, aap, aao = evaluate_model(50,600,agent,device,3,False,1,30,0,carla_port=5000, ground_truth=False)
+        agent.net.to(device)
+        _, _, _, aiol, aior, adt, aav, aap, aao = evaluate_model(3,500,agent,device,3,False,1,30,0,carla_port=5000, ground_truth=False)
         # carl.close()
         # os.system("mkdir data/{}".format(model_name))
         # os.system("cp snaps/{} data/{}".format(model_name, model_name))
@@ -222,9 +224,21 @@ if __name__ == "__main__":
         # os.system("rm -f data/*.png")
         # os.system("nautilus ./data")
         
-        print("avg intersection otherlane {}".format(aiol))
-        print("avg intersection offroad {}".format(aior))
-        print("distance traveled\n {}".format_map(adt))
-        print("accident count vehicle\n {}".format_map(aav))
-        print("accident count pedestrian\n {}".format_map(aap))
-        print("accident count other\n {}".format_map(aao))
+        with open('csv/aiol_{}.csv'.format(model_name), 'wb') as myfile:
+            wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+            wr.writerow(aiol)
+        with open('csv/aior_{}.csv'.format(model_name), 'wb') as myfile:
+            wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+            wr.writerow(aior)
+        with open('csv/adt_{}.csv'.format(model_name), 'wb') as myfile:
+            wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+            wr.writerow(adt)
+        with open('csv/aav_{}.csv'.format(model_name), 'wb') as myfile:
+            wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+            wr.writerow(aav)
+        with open('csv/aap_{}.csv'.format(model_name), 'wb') as myfile:
+            wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+            wr.writerow(aap)
+        with open('csv/aao_{}.csv'.format(model_name), 'wb') as myfile:
+            wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+            wr.writerow(aao)
