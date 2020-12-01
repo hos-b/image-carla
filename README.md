@@ -36,7 +36,7 @@ Controls from Carla's autopilot is used as the label for each frame. The current
 A custom Dataset class is used to handle the chunks from the hdf5 file. This also makes handling frame history much easier (`dataloader.py`).
 
 ### Training
-For classification tasks, CrossEntropyLoss is used. In `efficient-double`, MSELoss is used for the steering angle unit. Since the contol distribution is unbalanced, classes are weighed according to their occurance. To get the count for each class, `distribution.py` is ran on the dataset.
+For classification tasks, CrossEntropyLoss is used. In `efficient-double`, MSELoss is used for the steering angle unit. Since the contol distribution is unbalanced, classes are weighed according to their occurance. To get the count for each class, `distribution.py` is run on the dataset.
 
 ### Evaluation
 At the end of each epoch, the agent is tested in the simulator for a predefined number of episodes/frames. The following 5 values are used as metrics :
@@ -47,7 +47,7 @@ At the end of each epoch, the agent is tested in the simulator for a predefined 
 + average intersection with the other lane
 
 ### DAgger
-At the end of each epoch (before evaluation), the simulator is ran with the current trained agent. The output of the network is compared with that of the expert. If there's a discrepancy, the network is trained with that frame and its corresponding expert controls. Each episode continues until the car crashes or there's a certain intersection with offroad or the other lane. The algorithm itself continues until a predefined number of frames have been trained. 
+At the end of each epoch (before evaluation), the simulator is run with the current trained agent. The output of the network is compared with that of the expert. If there's a discrepancy, the network is trained with that frame and its corresponding expert controls. Each episode continues until the car crashes or there's a certain intersection with offroad or the other lane. The algorithm itself continues until a predefined number of frames have been trained. 
 
 ## Use
 
